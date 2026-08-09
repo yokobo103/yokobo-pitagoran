@@ -1,0 +1,17 @@
+{
+  "name": "pitagoran-proto",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 8140 --strictPort",
+    "build": "vite build",
+    "preview": "vite preview --port 8140"
+  },
+  "dependencies": {
+    "matter-js": "^0.20.0"
+  },
+  "devDependencies": {
+    "vite": "^8.2.1"
+  }
+}

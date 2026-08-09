@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#0b1220" />
+<meta name="mobile-web-app-capable" content="yes" />
+<title>ピタゴラン試作 — よこぼのAIラボ</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='27' font-size='27'>%F0%9F%8E%A2</text></svg>" />
+<link rel="stylesheet" href="./src/style.css" />
+</head>
+<body>
+<div class="app">
+  <header class="bar">
+    <h1>ピタゴラン試作</h1>
+    <nav id="stageTabs" class="tabs"></nav>
+  </header>
+
+  <main class="layout">
+    <section class="stagewrap">
+      <p id="hint" class="hint"></p>
+      <div class="canvasbox">
+        <canvas id="cv"></canvas>
+        <div id="overlay" class="overlay hidden">
+          <div class="card">
+            <p id="ovTitle" class="ovTitle">クリア！</p>
+            <p id="ovText" class="ovText"></p>
+            <div class="ovBtns">
+              <button id="ovAgain" class="btn">もう一度</button>
+              <button id="ovNext" class="btn primary">つぎのステージ</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="side">
+      <div class="controls">
+        <button id="btnPlay" class="btn primary big">▶ スタート</button>
+        <button id="btnReset" class="btn big">↺ もどす</button>
+      </div>
+      <div id="paletteList" class="plist"></div>
+      <div class="sidefoot">
+        <button id="btnClear" class="btn ghost">ぜんぶ消す</button>
+        <p class="tips">
+          パーツを選んで盤面をタップ。置いたパーツは<b>ドラッグで移動</b>、
+          選ぶと出る<b>青い丸をドラッグで回転</b>・<b>赤い×で削除</b>。
+        </p>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<div id="rotateHint" class="rotatehint hidden">
+  <div class="card">
+    <p class="ovTitle">📱 横向きにしてね</p>
+    <p class="ovText">コースが横長なので、端末を横にすると遊びやすいです。</p>
+    <button id="rhDismiss" class="btn">このまま遊ぶ</button>
+  </div>
+</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
