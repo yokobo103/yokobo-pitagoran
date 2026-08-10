@@ -97,20 +97,21 @@ export const PARTS = {
   weight: {
     label: 'てっきゅう',
     hint: '重い球。押す・落とす担当。ゴールにも入る。',
-    r: 17, w: 34, h: 34, dynamic: true, tint: '#8894a6',
+    // ドミノに «乗り越えられない» 高さが要るので、玉より一回り大きい
+    r: 22, w: 44, h: 44, dynamic: true, tint: '#8894a6',
     create(p) {
-      return Bodies.circle(p.x, p.y, 17, {
-        friction: 0.08, frictionAir: 0.004, density: 0.004, restitution: 0.15, label: 'ball-weight',
+      return Bodies.circle(p.x, p.y, 22, {
+        friction: 0.07, frictionAir: 0.003, density: 0.0014, restitution: 0.12, label: 'ball-weight',
       });
     },
     draw(ctx) {
-      const g = ctx.createRadialGradient(-6, -6, 2, 0, 0, 19);
-      g.addColorStop(0, '#cfd8e3'); g.addColorStop(0.5, '#7d8a9c'); g.addColorStop(1, '#41506180');
+      const g = ctx.createRadialGradient(-8, -8, 2, 0, 0, 24);
+      g.addColorStop(0, '#cfd8e3'); g.addColorStop(0.5, '#7d8a9c'); g.addColorStop(1, '#415061');
       ctx.fillStyle = g;
-      ctx.beginPath(); ctx.arc(0, 0, 17, 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.arc(0, 0, 22, 0, 7); ctx.fill();
       ctx.strokeStyle = 'rgba(30,40,55,.6)'; ctx.lineWidth = 2; ctx.stroke();
     },
-    icon(ctx) { PARTS.weight.draw(ctx); },
+    icon(ctx) { ctx.scale(0.8, 0.8); PARTS.weight.draw(ctx); },
   },
 
   jump: {

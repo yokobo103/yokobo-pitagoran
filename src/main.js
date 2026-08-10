@@ -35,11 +35,45 @@ function save() {
 }
 
 // ---------- 初期化 ----------
+// マウスがある環境だけ盤面上のハンドルを出す。指では小さすぎて追えないので操作卓に任せる。
+const FINE_POINTER = window.matchMedia('(pointer: fine)').matches;
+
 function setupCanvas() {
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   cv.width = WORLD_W * dpr;
   cv.height = WORLD_H * dpr;
+  cv.style.aspectRatio = `${WORLD_W} / ${WORLD_H}`;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+const selected = () => state.placed.find(p => p.uid === state.selectedUid) || null;
+const TAU = Math.PI * 2;
+const degOf = (rad) => Math.round((((rad % TAU) + TAU + Math.PI) % TAU - Math.PI) * 180 / Math.PI);
+
+// 選択中パーツの操作卓を実際の角度に合わせる
+function refreshSelBar() {
+  const p = selected();
+  const bar = $('selBar');
+  const side = document.querySelector('.side');
+  if (!p || state.running) {
+    bar.classList.add('hidden');
+    side.classList.remove('selecting');
+    return;
+  }
+  bar.classList.remove('hidden');
+  side.classList.add('selecting');
+  $('selName').textContent = PARTS[p.type].label;
+  const deg = degOf(p.angle);
+  $('selDeg').textContent = `${deg}°`;
+  const slider = $('selAngle');
+  if (document.activeElement !== slider) slider.value = String(deg);
+}
+
+function setAngle(p, deg) {
+  p.angle = deg * Math.PI / 180;
+  state.ghostAngle = p.angle;
+  save();
+  refreshSelBar();
 }
 
 function loadStage(i) {
@@ -110,6 +144,7 @@ function refreshPalette() {
   });
   $('btnPlay').disabled = state.running;
   $('btnReset').disabled = !state.running;
+  refreshSelBar();
 }
 
 // ---------- 座標・判定 ----------
@@ -140,9 +175,10 @@ function pickAt(x, y) {
   return null;
 }
 
-// 選択中パーツのハンドル（指でも押せるよう判定は広め）
+// 盤面上のハンドル（マウス環境のみ。判定は広め）
 function pickHandle(x, y) {
-  const p = state.placed.find(q => q.uid === state.selectedUid);
+  if (!FINE_POINTER) return null;
+  const p = selected();
   if (!p) return null;
   const h = handlesOf(p);
   for (const [name, c] of Object.entries(h)) {
@@ -167,7 +203,9 @@ function place(x, y) {
   if (!type || remaining(type) <= 0 || blocked(x, y)) return;
   const p = { uid: state.uid++, type, x, y, angle: state.ghostAngle };
   state.placed.push(p);
-  state.selectedUid = p.uid;
+  // 置いた直後は «選択しない»。パレットを出したまま連続で置けるようにする
+  // （ドミノを何本も並べる時にここで詰まる）
+  state.selectedUid = null;
   if (remaining(type) <= 0) state.selectedType = null;
   save();
   refreshPalette();
@@ -185,6 +223,7 @@ function rotate(dir = 1) {
     state.ghostAngle += step;
   }
   if (state.ghost) state.ghost.angle = state.ghostAngle;
+  refreshSelBar();
 }
 
 function removeSelected() {
@@ -277,6 +316,7 @@ cv.addEventListener('pointermove', (e) => {
       const step = Math.PI / 12;
       p.angle = e.shiftKey ? raw : Math.round(raw / step) * step;
       state.ghostAngle = p.angle;
+      refreshSelBar();
     } else {
       p.x = snap(x + state.drag.dx, !e.shiftKey);
       p.y = snap(y + state.drag.dy, !e.shiftKey);
@@ -318,7 +358,15 @@ window.addEventListener('keydown', (e) => {
 
 $('btnPlay').onclick = play;
 $('btnReset').onclick = back;
-$('rhDismiss').onclick = () => $('rotateHint').classList.add('dismissed');
+// --- 選択中パーツの操作卓 ---
+$('selAngle').addEventListener('input', (e) => {
+  const p = selected();
+  if (p) setAngle(p, Number(e.target.value));
+});
+$('selRotL').onclick = () => { const p = selected(); if (p) setAngle(p, degOf(p.angle) - 15); };
+$('selRotR').onclick = () => { const p = selected(); if (p) setAngle(p, degOf(p.angle) + 15); };
+$('selDel').onclick = removeSelected;
+
 $('btnClear').onclick = () => {
   state.placed = [];
   state.selectedUid = null;
@@ -334,7 +382,7 @@ function drawFrame(now) {
   render(ctx, {
     game, stage: stage(), placed: state.placed,
     ghost: state.ghost, selectedUid: state.selectedUid,
-    running: state.running, t: now / 1000,
+    running: state.running, t: now / 1000, showHandles: FINE_POINTER,
   });
 }
 function loop(now) {

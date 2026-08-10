@@ -172,7 +172,7 @@ function drawHandles(ctx, p) {
 }
 
 export function render(ctx, view) {
-  const { game, stage, placed, ghost, selectedUid, running, t } = view;
+  const { game, stage, placed, ghost, selectedUid, running, t, showHandles } = view;
   ctx.clearRect(0, 0, WORLD_W, WORLD_H);
   drawBackground(ctx, !running, t);
   drawWalls(ctx, stage);
@@ -207,7 +207,7 @@ export function render(ctx, view) {
       base: PARTS[p.type].drawBase ? { x: p.x, y: p.y, angle: p.angle } : null,
     });
     drawBall(ctx, stage.start.x, stage.start.y, 0);
-    const sel = placed.find(p => p.uid === selectedUid);
+    const sel = showHandles && placed.find(p => p.uid === selectedUid);
     if (sel) drawHandles(ctx, sel);
     if (ghost) drawInstance(ctx, ghost.type, ghost.x, ghost.y, ghost.angle, t, {
       ghost: true,

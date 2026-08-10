@@ -37,28 +37,37 @@
     </section>
 
     <aside class="side">
+      <!-- 選択中パーツの操作卓。指で触るのはここだけで済むようにする -->
+      <div id="selBar" class="selbar hidden">
+        <div class="selhead">
+          <span id="selName" class="selname">レール</span>
+          <span id="selDeg" class="seldeg">0°</span>
+          <button id="selDel" class="btn danger" title="このパーツを消す">🗑</button>
+        </div>
+        <div class="selrow">
+          <button id="selRotL" class="btn round" title="左に15°">↺</button>
+          <input id="selAngle" class="anglerange" type="range" min="-180" max="180" step="15" value="0"
+                 aria-label="かたむき" />
+          <button id="selRotR" class="btn round" title="右に15°">↻</button>
+        </div>
+      </div>
+
       <div class="controls">
         <button id="btnPlay" class="btn primary big">▶ スタート</button>
         <button id="btnReset" class="btn big">↺ もどす</button>
       </div>
+
       <div id="paletteList" class="plist"></div>
+
       <div class="sidefoot">
         <button id="btnClear" class="btn ghost">ぜんぶ消す</button>
         <p class="tips">
           パーツを選んで盤面をタップ。置いたパーツは<b>ドラッグで移動</b>、
-          選ぶと出る<b>青い丸をドラッグで回転</b>・<b>赤い×で削除</b>。
+          タップで選ぶと上に<b>かたむきスライダー</b>が出ます。
         </p>
       </div>
     </aside>
   </main>
-</div>
-
-<div id="rotateHint" class="rotatehint hidden">
-  <div class="card">
-    <p class="ovTitle">📱 横向きにしてね</p>
-    <p class="ovText">コースが横長なので、端末を横にすると遊びやすいです。</p>
-    <button id="rhDismiss" class="btn">このまま遊ぶ</button>
-  </div>
 </div>
 
 <script type="module" src="./src/main.js"></script>
