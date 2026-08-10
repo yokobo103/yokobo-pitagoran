@@ -60,6 +60,77 @@ function drawWalls(ctx, stage) {
   }
 }
 
+function drawDoors(ctx, stage, opened) {
+  for (const d of stage.doors || []) {
+    ctx.save();
+    ctx.translate(d.x, d.y);
+    ctx.rotate(d.angle || 0);
+    if (opened.has(d.id)) {
+      ctx.strokeStyle = 'rgba(126,224,255,.28)';
+      ctx.lineWidth = 2; ctx.setLineDash([6, 6]);
+      roundRect(ctx, -d.w / 2, -d.h / 2, d.w, d.h, 5); ctx.stroke();
+    } else {
+      const g = ctx.createLinearGradient(0, -d.h / 2, 0, d.h / 2);
+      g.addColorStop(0, '#7a5fd0'); g.addColorStop(1, '#4a3390');
+      ctx.fillStyle = g;
+      roundRect(ctx, -d.w / 2, -d.h / 2, d.w, d.h, 5); ctx.fill();
+      ctx.strokeStyle = 'rgba(220,205,255,.5)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,.35)';
+      for (let i = -1; i <= 1; i++) {
+        const L = Math.min(d.w, d.h) * 0.24;
+        ctx.fillRect(-L / 2 + i * L * 1.6 * (d.w > d.h ? 1 : 0), -L / 2 + i * L * 1.6 * (d.w > d.h ? 0 : 1), L, L);
+      }
+    }
+    ctx.restore();
+  }
+}
+
+function drawSwitches(ctx, stage, pressed) {
+  (stage.switches || []).forEach((s, i) => {
+    const on = pressed.has(i);
+    ctx.save();
+    ctx.translate(s.x, s.y);
+    ctx.fillStyle = on ? '#7ee0ff' : '#5b4a9c';
+    roundRect(ctx, -s.w / 2, -s.h / 2 + (on ? 3 : 0), s.w, s.h - (on ? 3 : 0), 4);
+    ctx.fill();
+    ctx.strokeStyle = on ? 'rgba(126,224,255,.9)' : 'rgba(200,185,255,.6)';
+    ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = on ? '#06202b' : 'rgba(230,220,255,.85)';
+    ctx.font = 'bold 13px system-ui';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(on ? 'ON' : 'OFF', 0, on ? 2 : 0);
+    ctx.restore();
+  });
+}
+
+function drawWarps(ctx, stage, t) {
+  for (const w of stage.warps || []) {
+    const r = w.r || 26;
+    for (const [x, y, hue, spin] of [[w.ax, w.ay, '#7ee0ff', 1], [w.bx, w.by, '#ffa8e0', -1]]) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(t * 1.6 * spin);
+      const g = ctx.createRadialGradient(0, 0, 3, 0, 0, r + 8);
+      g.addColorStop(0, hue + 'cc');
+      g.addColorStop(1, hue + '00');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(0, 0, r + 8, 0, 7); ctx.fill();
+      ctx.strokeStyle = hue; ctx.lineWidth = 3; ctx.lineCap = 'round';
+      for (let i = 0; i < 3; i++) {
+        ctx.rotate((Math.PI * 2) / 3);
+        ctx.beginPath(); ctx.arc(0, 0, r - 3, 0.3, 1.5); ctx.stroke();
+      }
+      ctx.restore();
+    }
+    // A→B の向きを点線で示す
+    ctx.save();
+    ctx.strokeStyle = 'rgba(180,220,255,.28)';
+    ctx.lineWidth = 2; ctx.setLineDash([5, 9]);
+    ctx.beginPath(); ctx.moveTo(w.ax, w.ay); ctx.lineTo(w.bx, w.by); ctx.stroke();
+    ctx.restore();
+  }
+}
+
 function drawGoal(ctx, g, t, cleared) {
   ctx.save();
   ctx.translate(g.x, g.y);
@@ -176,11 +247,15 @@ export function render(ctx, view) {
   ctx.clearRect(0, 0, WORLD_W, WORLD_H);
   drawBackground(ctx, !running, t);
   drawWalls(ctx, stage);
+  drawWarps(ctx, stage, t);
+  drawDoors(ctx, stage, running ? game.openedDoors : new Set());
+  drawSwitches(ctx, stage, running ? game.pressed : new Set());
   drawGoal(ctx, stage.goal, t, game.result === 'clear');
 
   if (running) {
     for (const inst of game.instances) {
       const spec = PARTS[inst.type];
+      if (spec.drawWorld) spec.drawWorld(ctx, inst);
       drawInstance(ctx, inst.type, inst.body.position.x, inst.body.position.y, inst.body.angle, t, {
         base: spec.drawBase ? { x: inst.x, y: inst.y, angle: inst.angle } : null,
       });
@@ -199,20 +274,25 @@ export function render(ctx, view) {
     ctx.strokeStyle = 'rgba(255,220,120,.7)'; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(stage.start.x, stage.start.y, BALL_R + 9, 0, 7); ctx.stroke();
     ctx.restore();
-    for (const p of stage.props || []) drawInstance(ctx, p.type, p.x, p.y, p.angle, t, {
-      base: PARTS[p.type].drawBase ? { x: p.x, y: p.y, angle: p.angle } : null,
-    });
-    for (const p of placed) drawInstance(ctx, p.type, p.x, p.y, p.angle, t, {
-      selected: p.uid === selectedUid,
-      base: PARTS[p.type].drawBase ? { x: p.x, y: p.y, angle: p.angle } : null,
-    });
+    const drawEdit = (p, opts = {}) => {
+      const spec = PARTS[p.type];
+      if (spec.drawWorld) {
+        ctx.globalAlpha = opts.ghost ? 0.55 : 1;
+        spec.drawWorld(ctx, p);
+        ctx.globalAlpha = 1;
+      }
+      const at = spec.editPos ? spec.editPos(p) : p;
+      drawInstance(ctx, p.type, at.x, at.y, at.angle, t, {
+        ...opts,
+        base: spec.drawBase ? { x: p.x, y: p.y, angle: p.angle } : null,
+      });
+    };
+    for (const p of stage.props || []) drawEdit(p);
+    for (const p of placed) drawEdit(p, { selected: p.uid === selectedUid });
     drawBall(ctx, stage.start.x, stage.start.y, 0);
     const sel = showHandles && placed.find(p => p.uid === selectedUid);
     if (sel) drawHandles(ctx, sel);
-    if (ghost) drawInstance(ctx, ghost.type, ghost.x, ghost.y, ghost.angle, t, {
-      ghost: true,
-      base: PARTS[ghost.type].drawBase ? { x: ghost.x, y: ghost.y, angle: ghost.angle } : null,
-    });
+    if (ghost) drawEdit(ghost, { ghost: true });
   }
 }
 

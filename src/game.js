@@ -27,7 +27,12 @@ export class Game {
     this.fans = [];
     this.belts = [];
     this.jumps = [];
+    this.tramps = [];
     this.seesaws = [];
+    this.warpCooldown = new Map();
+    this.openedDoors = new Set();
+    this.doorBodies = new Map();
+    this.pressed = new Set();
     this.sparks = [];
     this.elapsed = 0;
     this.idle = 0;
@@ -41,6 +46,24 @@ export class Game {
         isStatic: true, angle: w.angle || 0, friction: 0.4, restitution: 0.1, label: 'wall',
       }));
     }
+
+    // とびら：スイッチを踏むまで閉じている壁
+    for (const d of stage.doors || []) {
+      const body = Bodies.rectangle(d.x, d.y, d.w, d.h, {
+        isStatic: true, angle: d.angle || 0, friction: 0.4, label: 'door',
+      });
+      this.doorBodies.set(d.id, body);
+      statics.push(body);
+    }
+    // スイッチ：玉が触れたら対応するとびらを開ける
+    this.switchSensors = (stage.switches || []).map((s, i) => {
+      const body = Bodies.rectangle(s.x, s.y, s.w, s.h, {
+        isStatic: true, isSensor: true, label: 'switch',
+      });
+      body.switchIndex = i;
+      statics.push(body);
+      return { def: s, body };
+    });
 
     // カゴは「上からしか入らない」入れ物にする（床を転がって入るのは不可）
     const g = stage.goal;
@@ -66,6 +89,7 @@ export class Game {
       if (spec.kind === 'belt') this.belts.push(inst);
       if (spec.kind === 'jump') this.jumps.push(inst);
       if (spec.kind === 'seesaw') this.seesaws.push(inst);
+      if (spec.kind === 'tramp') this.tramps.push(inst);
     }
 
     this.ball = Bodies.circle(stage.start.x, stage.start.y, BALL_R, {
@@ -92,6 +116,8 @@ export class Game {
       const { bodyA, bodyB } = pair;
       this.checkGoal(bodyA, bodyB) || this.checkGoal(bodyB, bodyA);
       this.tryLaunch(bodyA, bodyB) || this.tryLaunch(bodyB, bodyA);
+      this.tryBounce(bodyA, bodyB) || this.tryBounce(bodyB, bodyA);
+      this.trySwitch(bodyA, bodyB) || this.trySwitch(bodyB, bodyA);
       const speed = Vector.magnitude(Vector.sub(bodyA.velocity, bodyB.velocity));
       const contacts = pair.contacts || pair.activeContacts || [];
       const c = contacts[0] && (contacts[0].vertex || contacts[0]);
@@ -119,6 +145,65 @@ export class Game {
     Body.setVelocity(other, { x: n.x * p + t.x * along * 0.6, y: n.y * p + t.y * along * 0.6 });
     this.spark(other.position.x, other.position.y, 1);
     return true;
+  }
+
+  // collisionStart はソルバが跳ね返した «後» に呼ばれるので、
+  // 各ステップの頭で «ぶつかる前» の速度を控えておく（トランポリンがこれを使う）
+  stashVelocities() {
+    for (const b of Composite.allBodies(this.world)) {
+      if (b.isStatic || b.isSensor) continue;
+      b.preV = { x: b.velocity.x, y: b.velocity.y };
+    }
+  }
+
+  // トランポリンは «入ってきた勢いを返す»。ジャンプ台の固定初速とは別物にする。
+  tryBounce(pad, other) {
+    if (pad.label !== 'tramp' || other.isStatic || other.isSensor) return false;
+    const a = pad.angle;
+    const n = { x: Math.sin(a), y: -Math.cos(a) };
+    const v = other.preV || other.velocity;
+    const vn = v.x * n.x + v.y * n.y;
+    if (vn > -0.6) return true;                       // 離れていく／ほぼ静止なら何もしない
+    const dv = -vn * (1 + PARTS.tramp.gain);
+    let vx = v.x + n.x * dv;
+    let vy = v.y + n.y * dv;
+    const sp = Math.hypot(vx, vy);
+    const MAX = 22;                                    // 暴走防止
+    if (sp > MAX) { vx = vx / sp * MAX; vy = vy / sp * MAX; }
+    Body.setVelocity(other, { x: vx, y: vy });
+    this.spark(other.position.x, other.position.y, 0.8);
+    return true;
+  }
+
+  trySwitch(sensor, other) {
+    if (sensor.label !== 'switch' || other.isStatic || other.isSensor) return false;
+    const entry = this.switchSensors[sensor.switchIndex];
+    if (!entry || this.pressed.has(sensor.switchIndex)) return true;
+    this.pressed.add(sensor.switchIndex);
+    const door = this.doorBodies.get(entry.def.opens);
+    if (door && !this.openedDoors.has(entry.def.opens)) {
+      this.openedDoors.add(entry.def.opens);
+      Composite.remove(this.world, door);
+      this.spark(door.position.x, door.position.y, 1);
+    }
+    this.spark(sensor.position.x, sensor.position.y, 1);
+    return true;
+  }
+
+  // ワープ：Aに入るとBから同じ速度で出る（一方通行）
+  applyWarps() {
+    for (const w of this.stage.warps || []) {
+      const r = w.r || 26;
+      for (const b of Composite.allBodies(this.world)) {
+        if (b.isStatic || b.isSensor) continue;
+        if (this.elapsed - (this.warpCooldown.get(b.id) || -1e9) < 300) continue;
+        if (Math.hypot(b.position.x - w.ax, b.position.y - w.ay) > r) continue;
+        this.warpCooldown.set(b.id, this.elapsed);
+        this.spark(w.ax, w.ay, 1);
+        Body.setPosition(b, { x: w.bx, y: w.by });
+        this.spark(w.bx, w.by, 1);
+      }
+    }
   }
 
   onCollisionActive(e) {
@@ -200,9 +285,12 @@ export class Game {
 
     this.elapsed += dt;
     this.applyFans();
+    this.applyWarps();
     this.assistDominoes();
+    this.stashVelocities();
     Engine.update(this.engine, dt / 2);
     this.limitSeesaws();
+    this.stashVelocities();
     Engine.update(this.engine, dt / 2);
     this.limitSeesaws();
 

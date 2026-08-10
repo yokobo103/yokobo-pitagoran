@@ -38,6 +38,44 @@ function save() {
 // マウスがある環境だけ盤面上のハンドルを出す。指では小さすぎて追えないので操作卓に任せる。
 const FINE_POINTER = window.matchMedia('(pointer: fine)').matches;
 
+// --- ブラウザの拡大を止める ---
+// iOS Safari は viewport の user-scalable=no を無視するので、JS側で塞ぐしかない。
+// パーツをドラッグ中に2本目の指が触れたり、素早い2連続タップで «勝手に拡大» するのを防ぐ。
+function blockZoomGestures() {
+  for (const type of ['gesturestart', 'gesturechange', 'gestureend']) {
+    document.addEventListener(type, (e) => e.preventDefault(), { passive: false });
+  }
+  document.addEventListener('touchstart', (e) => {
+    if (e.touches.length > 1) e.preventDefault();
+  }, { passive: false });
+  let lastTouchEnd = 0;
+  document.addEventListener('touchend', (e) => {
+    const now = performance.now();
+    // ボタンやスライダーの連打は殺さない（↻ を続けて押せなくなるため）
+    if (now - lastTouchEnd < 350 && !e.target.closest('button, input')) e.preventDefault();
+    lastTouchEnd = now;
+  }, { passive: false });
+  document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
+}
+
+// それでも拡大されてしまった時の逃げ道。戻せなくなるのが一番困る。
+function setupZoomEscape() {
+  const vv = window.visualViewport;
+  const chip = $('zoomReset');
+  if (!vv || !chip) return;
+  const meta = document.querySelector('meta[name=viewport]');
+  const BASE = meta.getAttribute('content');
+  const check = () => chip.classList.toggle('hidden', vv.scale <= 1.02);
+  vv.addEventListener('resize', check);
+  vv.addEventListener('scroll', check);
+  chip.onclick = () => {
+    meta.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0');
+    window.scrollTo(0, 0);
+    setTimeout(() => { meta.setAttribute('content', BASE); check(); }, 120);
+  };
+  check();
+}
+
 function setupCanvas() {
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   cv.width = WORLD_W * dpr;
@@ -167,7 +205,13 @@ function localOf(px, py, x, y, angle) {
 function hitTest(p, x, y) {
   const spec = PARTS[p.type];
   const { lx, ly } = localOf(x, y, p.x, p.y, p.angle);
-  return Math.abs(lx) <= spec.w / 2 + 8 && Math.abs(ly) <= spec.h / 2 + 8;
+  if (Math.abs(lx) <= spec.w / 2 + 8 && Math.abs(ly) <= spec.h / 2 + 8) return true;
+  // ふりこのように «置く点» と «見た目の本体» が離れるパーツは本体側でも拾う
+  if (spec.editPos) {
+    const at = spec.editPos(p);
+    return Math.hypot(x - at.x, y - at.y) <= Math.max(spec.w, spec.h) / 2 + 8;
+  }
+  return false;
 }
 
 function pickAt(x, y) {
@@ -415,6 +459,8 @@ window.__pita = {
   draw: (t = 0) => drawFrame(t * 1000),
 };
 
+blockZoomGestures();
+setupZoomEscape();
 setupCanvas();
 loadStage(0);
 requestAnimationFrame(loop);

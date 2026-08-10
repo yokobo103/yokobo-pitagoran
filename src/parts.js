@@ -199,6 +199,81 @@ export const PARTS = {
     icon(ctx) { ctx.scale(0.55, 0.55); PARTS.belt.draw(ctx, 0.2); },
   },
 
+  tramp: {
+    label: 'トランポリン',
+    hint: '来た勢いをそのまま返す。速く当たるほど高く跳ぶ。',
+    w: 96, h: 20, kind: 'tramp', gain: 1.3, tint: '#9b7bff',
+    create(p) {
+      return Bodies.rectangle(p.x, p.y, 96, 12, {
+        isStatic: true, angle: p.angle, friction: 0.1, label: 'tramp',
+      });
+    },
+    draw(ctx, t = 0) {
+      ctx.fillStyle = '#3b3358';
+      for (const s of [-1, 1]) { roundRect(ctx, s * 44 - 5, -2, 10, 22, 3); ctx.fill(); }
+      const sag = Math.sin(t * 5) * 1.6;
+      const g = ctx.createLinearGradient(0, -8, 0, 6);
+      g.addColorStop(0, '#c4aaff'); g.addColorStop(1, '#7d5be0');
+      ctx.strokeStyle = g; ctx.lineWidth = 7; ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-44, -4);
+      ctx.quadraticCurveTo(0, 4 + sag, 44, -4);
+      ctx.stroke();
+    },
+    icon(ctx) { ctx.scale(0.5, 0.5); PARTS.tramp.draw(ctx, 0.4); },
+  },
+
+  pendulum: {
+    label: 'ふりこ',
+    hint: '軸からぶら下がって揺れる。当たると大きく弾きとばす。',
+    w: 44, h: 44, kind: 'pendulum', len: 104, dynamic: true, tint: '#f2b35c',
+    create(p) {
+      const len = PARTS.pendulum.len;
+      const bob = Bodies.circle(p.x + Math.sin(p.angle) * len, p.y + Math.cos(p.angle) * len, 20, {
+        friction: 0.1, frictionAir: 0.008, density: 0.005, restitution: 0.5, label: 'pendulum',
+      });
+      const arm = Constraint.create({
+        pointA: { x: p.x, y: p.y }, bodyB: bob, pointB: { x: 0, y: 0 },
+        length: len, stiffness: 1, damping: 0.02, render: { visible: false },
+      });
+      return { body: bob, constraints: [arm] };
+    },
+    draw(ctx) {
+      const g = ctx.createRadialGradient(-7, -7, 2, 0, 0, 22);
+      g.addColorStop(0, '#ffe0a8'); g.addColorStop(0.5, '#e0a04a'); g.addColorStop(1, '#9c6520');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(0, 0, 20, 0, 7); ctx.fill();
+      ctx.strokeStyle = 'rgba(70,40,8,.6)'; ctx.lineWidth = 2; ctx.stroke();
+    },
+    drawBase(ctx) {
+      ctx.fillStyle = '#4a5769';
+      roundRect(ctx, -16, -10, 32, 18, 5); ctx.fill();
+      ctx.fillStyle = '#28313d';
+      ctx.beginPath(); ctx.arc(0, 0, 5, 0, 7); ctx.fill();
+    },
+    // 置く点は «軸»。錘はそこからぶら下がった位置に描く
+    editPos(p) {
+      const len = PARTS.pendulum.len;
+      return { x: p.x + Math.sin(p.angle) * len, y: p.y + Math.cos(p.angle) * len, angle: 0 };
+    },
+    // 軸と錘をつなぐ腕はワールド座標で引く（両端の位置が要るため）
+    drawWorld(ctx, inst) {
+      const b = inst.body ? inst.body.position
+        : { x: inst.x + Math.sin(inst.angle) * PARTS.pendulum.len, y: inst.y + Math.cos(inst.angle) * PARTS.pendulum.len };
+      ctx.save();
+      ctx.strokeStyle = '#8c9bb0'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(inst.x, inst.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      ctx.restore();
+    },
+    icon(ctx) {
+      ctx.scale(0.5, 0.5); ctx.translate(0, -26);
+      PARTS.pendulum.drawBase(ctx);
+      ctx.strokeStyle = '#8c9bb0'; ctx.lineWidth = 7; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(22, 44); ctx.stroke();
+      ctx.translate(22, 44); PARTS.pendulum.draw(ctx);
+    },
+  },
+
   seesaw: {
     label: 'シーソー',
     hint: '真ん中の軸で傾く板。重さで道が変わる。',
