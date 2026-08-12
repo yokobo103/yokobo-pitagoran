@@ -139,6 +139,9 @@ function buildTabs() {
     b.onclick = () => loadStage(i);
     nav.appendChild(b);
   });
+  // ステージが増えたのでタブは横スクロールする。現在地を見える位置へ寄せる
+  const active = nav.querySelector('button.on');
+  if (active) active.scrollIntoView({ inline: 'center', block: 'nearest' });
 }
 
 function remaining(type) {
