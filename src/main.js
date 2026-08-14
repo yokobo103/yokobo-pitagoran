@@ -27,6 +27,22 @@ const state = {
 
 const stage = () => STAGES[state.stageIndex];
 
+// --- とりけし（Undo）。子どもは必ず誤操作するので、戻れることを最優先にする ---
+let history = [];
+const snapshot = () => JSON.stringify(state.placed.map(({ type, x, y, angle }) => ({ type, x, y, angle })));
+function pushHistory() {
+  history.push(snapshot());
+  if (history.length > 40) history.shift();
+}
+function undo() {
+  if (state.running || !history.length) return;
+  state.placed = JSON.parse(history.pop()).map(p => ({ ...p, uid: state.uid++ }));
+  state.selectedUid = null;
+  state.drag = null;
+  save();
+  refreshPalette();
+}
+
 // ---------- 保存 ----------
 const saved = JSON.parse(localStorage.getItem(SAVE_KEY) || '{}');
 function save() {
@@ -92,14 +108,11 @@ const degOf = (rad) => Math.round((((rad % TAU) + TAU + Math.PI) % TAU - Math.PI
 function refreshSelBar() {
   const p = selected();
   const bar = $('selBar');
-  const side = document.querySelector('.side');
-  if (!p || state.running) {
-    bar.classList.add('hidden');
-    side.classList.remove('selecting');
-    return;
-  }
-  bar.classList.remove('hidden');
-  side.classList.add('selecting');
+  const on = !!p && !state.running;
+  bar.classList.toggle('active', on);
+  $('selCtl').classList.toggle('hidden', !on);
+  $('selHelp').style.display = on ? 'none' : '';
+  if (!on) return;
   $('selName').textContent = PARTS[p.type].label;
   const deg = degOf(p.angle);
   $('selDeg').textContent = `${deg}°`;
@@ -116,12 +129,14 @@ function setAngle(p, deg) {
 
 function loadStage(i) {
   state.stageIndex = i;
-  state.placed = (saved[stage().id] || []).map(p => ({ ...p, uid: state.uid++ }));
+  // 過去に盤外へ出してしまった配置も、読み込み時に拾い直す
+  state.placed = (saved[stage().id] || []).map(p => clampToBoard({ ...p, uid: state.uid++ }));
   state.selectedType = null;
   state.selectedUid = null;
   state.ghost = null;
   state.ghostAngle = 0;
   state.running = false;
+  history = [];
   hideOverlay();
   game.reset(stage(), state.placed);
   buildTabs();
@@ -185,6 +200,7 @@ function refreshPalette() {
   });
   $('btnPlay').disabled = state.running;
   $('btnReset').disabled = !state.running;
+  $('btnUndo').disabled = state.running || !history.length;
   refreshSelBar();
 }
 
@@ -205,22 +221,41 @@ function localOf(px, py, x, y, angle) {
   return { lx: dx * c - dy * s, ly: dx * s + dy * c };
 }
 
-function hitTest(p, x, y) {
+// パーツまでの距離（中に入っていれば0）。指の «外し» を許すために使う
+function distToPart(p, x, y) {
   const spec = PARTS[p.type];
   const { lx, ly } = localOf(x, y, p.x, p.y, p.angle);
-  if (Math.abs(lx) <= spec.w / 2 + 8 && Math.abs(ly) <= spec.h / 2 + 8) return true;
+  const dx = Math.max(0, Math.abs(lx) - spec.w / 2);
+  const dy = Math.max(0, Math.abs(ly) - spec.h / 2);
+  let d = Math.hypot(dx, dy);
   // ふりこのように «置く点» と «見た目の本体» が離れるパーツは本体側でも拾う
   if (spec.editPos) {
     const at = spec.editPos(p);
-    return Math.hypot(x - at.x, y - at.y) <= Math.max(spec.w, spec.h) / 2 + 8;
+    d = Math.min(d, Math.max(0, Math.hypot(x - at.x, y - at.y) - Math.max(spec.w, spec.h) / 2));
   }
-  return false;
+  return d;
 }
 
+// レールは画面上たった8px。ぴったり当てるのは指には無理なので、
+// «一番近いパーツ» を拾う。置く途中（パレット選択中）は誤爆しないよう判定を狭める。
 function pickAt(x, y) {
-  for (let i = state.placed.length - 1; i >= 0; i--) if (hitTest(state.placed[i], x, y)) return state.placed[i];
-  return null;
+  const reach = state.selectedType ? 18 : 32;
+  let best = null;
+  let bestD = reach;
+  for (const p of state.placed) {
+    const d = distToPart(p, x, y);
+    if (d <= bestD) { bestD = d; best = p; }
+  }
+  return best;
 }
+
+// 盤面の外へ持ち出せてしまうと «消えた» ように見えるので、必ず内側に留める
+const EDGE = 22;
+const clampToBoard = (p) => {
+  p.x = Math.min(WORLD_W - EDGE, Math.max(EDGE, p.x));
+  p.y = Math.min(WORLD_H - EDGE, Math.max(EDGE, p.y));
+  return p;
+};
 
 // 盤面上のハンドル（マウス環境のみ。判定は広め）
 function pickHandle(x, y) {
@@ -248,6 +283,7 @@ function blocked(x, y) {
 function place(x, y) {
   const type = state.selectedType;
   if (!type || remaining(type) <= 0 || blocked(x, y)) return;
+  pushHistory();
   const p = { uid: state.uid++, type, x, y, angle: state.ghostAngle };
   state.placed.push(p);
   // 置いた直後は «選択しない»。パレットを出したまま連続で置けるようにする
@@ -276,6 +312,7 @@ function rotate(dir = 1) {
 function removeSelected() {
   const i = state.placed.findIndex(p => p.uid === state.selectedUid);
   if (i < 0) return;
+  pushHistory();
   state.placed.splice(i, 1);
   state.selectedUid = null;
   save();
@@ -330,6 +367,7 @@ cv.addEventListener('pointerdown', (e) => {
   if (handle) {
     if (handle.name === 'del') { removeSelected(); return; }
     const p = handle.part;
+    pushHistory();
     // 掴んだ位置を基準にした相対回転（触った瞬間に角度が飛ばないように）
     state.drag = {
       uid: p.uid, mode: 'rotate',
@@ -343,6 +381,7 @@ cv.addEventListener('pointerdown', (e) => {
     state.selectedUid = hit.uid;
     state.selectedType = null;
     state.ghost = null;
+    pushHistory();
     state.drag = { uid: hit.uid, mode: 'move', dx: hit.x - x, dy: hit.y - y };
   } else if (state.selectedType) {
     place(snap(x, !e.shiftKey), snap(y, !e.shiftKey));
@@ -367,6 +406,7 @@ cv.addEventListener('pointermove', (e) => {
     } else {
       p.x = snap(x + state.drag.dx, !e.shiftKey);
       p.y = snap(y + state.drag.dy, !e.shiftKey);
+      clampToBoard(p);
     }
     return;
   }
@@ -405,16 +445,44 @@ window.addEventListener('keydown', (e) => {
 
 $('btnPlay').onclick = play;
 $('btnReset').onclick = back;
+// --- あそびかた（初回だけ自動で出す） ---
+const TUT_KEY = 'pitagoran.tutorial.seen';
+const showTutorial = () => $('tutorial').classList.remove('hidden');
+$('btnHelp').onclick = showTutorial;
+$('tutClose').onclick = () => {
+  $('tutorial').classList.add('hidden');
+  localStorage.setItem(TUT_KEY, '1');
+};
+if (!localStorage.getItem(TUT_KEY)) showTutorial();
+
 // --- 選択中パーツの操作卓 ---
 $('selAngle').addEventListener('input', (e) => {
   const p = selected();
   if (p) setAngle(p, Number(e.target.value));
 });
-$('selRotL').onclick = () => { const p = selected(); if (p) setAngle(p, degOf(p.angle) - 15); };
-$('selRotR').onclick = () => { const p = selected(); if (p) setAngle(p, degOf(p.angle) + 15); };
+$('selRotL').onclick = () => { const p = selected(); if (p) { pushHistory(); setAngle(p, degOf(p.angle) - 15); } };
+$('selRotR').onclick = () => { const p = selected(); if (p) { pushHistory(); setAngle(p, degOf(p.angle) + 15); } };
 $('selDel').onclick = removeSelected;
+// スライダーは連続で発火するので、掴んだ瞬間に1回だけ控える
+$('selAngle').addEventListener('pointerdown', () => { if (selected()) pushHistory(); });
 
+$('btnUndo').onclick = undo;
+
+// 「ぜんぶ消す」は誤爆すると全部消えるので2段階にする
+let clearArmed = null;
 $('btnClear').onclick = () => {
+  const b = $('btnClear');
+  if (!clearArmed) {
+    b.textContent = 'ほんとに?';
+    b.classList.add('armed');
+    clearArmed = setTimeout(() => {
+      b.textContent = '🗑'; b.classList.remove('armed'); clearArmed = null;
+    }, 2500);
+    return;
+  }
+  clearTimeout(clearArmed); clearArmed = null;
+  b.textContent = '🗑'; b.classList.remove('armed');
+  pushHistory();
   state.placed = [];
   state.selectedUid = null;
   save();

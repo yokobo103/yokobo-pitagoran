@@ -15,6 +15,8 @@
 <div class="app">
   <header class="bar">
     <h1>ピタゴラン試作</h1>
+    <button id="btnHelp" class="btn help" title="あそびかた">？</button>
+    <button id="btnClear" class="btn help danger" title="ぜんぶ消す">🗑</button>
     <nav id="stageTabs" class="tabs"></nav>
   </header>
 
@@ -37,40 +39,47 @@
     </section>
 
     <aside class="side">
-      <!-- 選択中パーツの操作卓。指で触るのはここだけで済むようにする -->
-      <div id="selBar" class="selbar hidden">
-        <div class="selhead">
+      <div class="controls">
+        <button id="btnPlay" class="btn primary big">▶ スタート</button>
+        <button id="btnReset" class="btn big">⟲ リセット</button>
+        <button id="btnUndo" class="btn big">↩ とりけし</button>
+      </div>
+
+      <!-- 選択中パーツの操作卓。場所は常に確保して、切り替わりを無くす -->
+      <div id="selBar" class="selbar">
+        <p id="selHelp" class="selhelp">置いたパーツをタップすると、ここで かたむきを かえられます</p>
+        <div id="selCtl" class="selctl hidden">
           <span id="selName" class="selname">レール</span>
-          <span id="selDeg" class="seldeg">0°</span>
-          <button id="selDel" class="btn danger" title="このパーツを消す">🗑</button>
-        </div>
-        <div class="selrow">
           <button id="selRotL" class="btn round" title="左に15°">↺</button>
           <input id="selAngle" class="anglerange" type="range" min="-180" max="180" step="15" value="0"
                  aria-label="かたむき" />
           <button id="selRotR" class="btn round" title="右に15°">↻</button>
+          <span id="selDeg" class="seldeg">0°</span>
+          <button id="selDel" class="btn danger" title="このパーツを消す">🗑</button>
         </div>
       </div>
 
-      <div class="controls">
-        <button id="btnPlay" class="btn primary big">▶ スタート</button>
-        <button id="btnReset" class="btn big">↺ もどす</button>
-      </div>
-
-      <div id="paletteList" class="plist"></div>
-
-      <div class="sidefoot">
-        <button id="btnClear" class="btn ghost">ぜんぶ消す</button>
-        <p class="tips">
-          パーツを選んで盤面をタップ。置いたパーツは<b>ドラッグで移動</b>、
-          タップで選ぶと上に<b>かたむきスライダー</b>が出ます。
-        </p>
+      <div class="plistwrap">
+        <div id="paletteList" class="plist"></div>
       </div>
     </aside>
   </main>
 </div>
 
 <button id="zoomReset" class="zoomreset hidden">🔍 表示をもどす</button>
+
+<div id="tutorial" class="tutorial hidden">
+  <div class="card tutcard">
+    <p class="ovTitle">あそびかた</p>
+    <ol class="tutlist">
+      <li><b>したの パーツをえらぶ</b><br />えらんだら、そのまま なんこでも おけます</li>
+      <li><b>ばんめんを タップして おく</b><br />おいたパーツは <b>ゆびで ひっぱると うごきます</b></li>
+      <li><b>おいたパーツを タップ</b><br />まんなかの <b>まるを よこに うごかすと かたむきます</b>。↺ ↻ でも かわります</li>
+      <li><b>▶ スタート</b><br />たまが カゴに はいれば クリア。<b>↺もどす</b> で やりなおし</li>
+    </ol>
+    <button id="tutClose" class="btn primary big">はじめる</button>
+  </div>
+</div>
 
 <script type="module" src="./src/main.js"></script>
 </body>

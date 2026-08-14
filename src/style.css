@@ -64,17 +64,18 @@ canvas#cv {
 .btn.danger { background: rgba(255, 123, 123, .14); border-color: #7a3535; color: var(--danger); padding: 6px 12px; }
 .btn:disabled { opacity: .4; cursor: default; }
 
-/* 選択中パーツの操作卓 */
+/* 選択中パーツの操作卓。場所は常に確保しておき、中身だけ差し替える */
 .selbar {
-  background: var(--panel2); border: 1px solid var(--accent2);
-  box-shadow: 0 0 0 2px rgba(126, 224, 255, .14);
-  border-radius: 12px; padding: 8px 10px 10px; display: flex; flex-direction: column; gap: 6px;
+  background: var(--panel2); border: 1px solid var(--line);
+  border-radius: 12px; padding: 6px 10px; display: flex; align-items: center;
+  min-height: 60px;
 }
-.selbar.hidden { display: none; }
-.selhead { display: flex; align-items: center; gap: 8px; }
-.selname { font-size: 13px; font-weight: 700; }
-.seldeg { font-size: 12px; color: var(--accent2); margin-left: auto; font-variant-numeric: tabular-nums; }
-.selrow { display: flex; align-items: center; gap: 8px; }
+.selbar.active { border-color: var(--accent2); box-shadow: 0 0 0 2px rgba(126, 224, 255, .14); }
+.selhelp { font-size: 11.5px; line-height: 1.5; color: var(--dim); margin: 0; text-align: center; width: 100%; }
+.selctl { display: flex; align-items: center; gap: 7px; width: 100%; }
+.selctl.hidden { display: none; }
+.selname { font-size: 12px; font-weight: 700; flex: 0 0 auto; }
+.seldeg { font-size: 12px; color: var(--accent2); font-variant-numeric: tabular-nums; flex: 0 0 40px; text-align: right; }
 .anglerange {
   flex: 1 1 auto; min-width: 0; height: 48px; margin: 0;
   -webkit-appearance: none; appearance: none; background: transparent; touch-action: none;
@@ -93,6 +94,7 @@ canvas#cv {
   border: 3px solid #0b1220;
 }
 
+.plistwrap { position: relative; min-height: 0; }
 .plist { display: flex; flex-wrap: wrap; gap: 7px; }
 .pitem {
   display: flex; align-items: center; gap: 8px; text-align: left;
@@ -105,9 +107,6 @@ canvas#cv {
 .pitem canvas { width: 50px; height: 40px; flex: 0 0 auto; }
 .pitem .nm { font-size: 12.5px; font-weight: 700; }
 .pitem .ct { font-size: 11px; color: var(--dim); }
-.sidefoot { display: flex; flex-direction: column; gap: 8px; margin-top: auto; }
-.tips { font-size: 11.5px; line-height: 1.7; color: var(--dim); margin: 0 2px; }
-.tips b { color: var(--accent2); font-weight: 700; }
 
 /* 拡大されてしまった時の逃げ道 */
 .zoomreset {
@@ -139,8 +138,9 @@ canvas#cv {
   }
   .bar { gap: 8px; margin-bottom: 6px; flex: 0 0 auto; }
   h1 { display: none; }
-  .tabs { width: 100%; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 2px; }
+  .tabs { flex: 1 1 auto; min-width: 0; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 2px; }
   .tabs button { padding: 7px 12px; font-size: 12.5px; }
+  .bar { flex-wrap: nowrap; }
   .hint { display: none; }
 
   .layout { flex: 1 1 auto; min-height: 0; flex-direction: column; gap: 8px; }
@@ -148,16 +148,38 @@ canvas#cv {
   .canvasbox { flex: 1 1 auto; min-height: 0; display: flex; justify-content: center; }
   canvas#cv { height: 100%; width: auto; max-width: 100%; border-radius: 10px; }
 
-  /* 操作卓の高さを固定しておくと、選択のたびに盤面がガタつかない */
-  .side { flex: 0 0 auto; height: 186px; width: 100%; padding: 9px; gap: 7px; overflow: hidden; }
-  .plist { flex: 1 1 auto; overflow-y: auto; align-content: flex-start; }
-  .pitem { flex: 1 1 104px; min-height: 50px; }
-  .pitem .nm { font-size: 12px; }
-  .sidefoot { margin-top: 0; }
-  .tips { display: none; }
-  /* パーツ選択中はパレットを操作卓に差し替える（面積を食い合わない） */
-  .side.selecting .plist, .side.selecting .sidefoot { display: none; }
-  .selbar { flex: 1 1 auto; justify-content: center; }
+  /* 高さを固定しておくと、選択のたびに盤面がガタつかない。
+     «パレット» と «操作卓» は差し替えず、両方を常に置く */
+  .side { flex: 0 0 auto; height: 186px; width: 100%; padding: 8px; gap: 6px; overflow: hidden; }
+  .controls { flex: 0 0 auto; align-items: stretch; }
+  .btn.big { min-height: 42px; font-size: 14px; }
+  .btn.ghost { flex: 0 0 auto; font-size: 11px; padding: 4px 9px; }
+  .selbar { flex: 0 0 auto; min-height: 54px; padding: 5px 8px; }
+  .selhelp { font-size: 11px; }
+  .selname { display: none; }
+  .btn.round { width: 46px; height: 42px; font-size: 20px; }
+  .btn.danger { width: 44px; padding: 0; font-size: 17px; }
+  .anglerange { height: 42px; }
+  .seldeg { flex: 0 0 34px; font-size: 11px; }
+
+  /* パレットは横一列。右端をぼかして «横に続く» ことを見せる */
+  .plistwrap { flex: 1 1 auto; }
+  .plistwrap::after {
+    content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 26px;
+    pointer-events: none;
+    background: linear-gradient(90deg, rgba(22, 33, 58, 0), var(--panel));
+  }
+  .plist {
+    flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; height: 100%;
+    align-items: stretch; padding-right: 22px; scroll-snap-type: x proximity;
+  }
+  .pitem {
+    flex: 0 0 auto; width: 74px; flex-direction: column; gap: 0; padding: 2px;
+    justify-content: center; scroll-snap-align: start;
+  }
+  .pitem canvas { width: 56px; height: 30px; }
+  .pitem .nm { font-size: 10px; white-space: nowrap; }
+  .pitem .ct { font-size: 10px; }
 }
 
 /* 横持ちは盤面が縦長なので細くなる。操作卓は右へ寄せる */
@@ -165,6 +187,26 @@ canvas#cv {
   .layout { flex-direction: row; align-items: stretch; }
   .stagewrap { flex: 0 0 auto; }
   .side { height: auto; flex: 1 1 auto; }
-  .side.selecting .sidefoot { display: none; }
-  .side.selecting .plist { display: flex; }
+  .plist { flex-wrap: wrap; overflow-x: visible; }
+  .pitem { flex: 1 1 74px; }
+}
+
+/* あそびかた */
+.tutorial {
+  position: fixed; inset: 0; z-index: 40; display: grid; place-items: center;
+  background: rgba(6, 11, 22, .88); padding: 16px;
+}
+.tutorial.hidden { display: none; }
+.tutcard { text-align: left; max-width: 380px; }
+.tutlist { margin: 0 0 18px; padding-left: 22px; }
+.tutlist li { font-size: 13px; line-height: 1.65; color: var(--dim); margin-bottom: 10px; }
+.tutlist b { color: var(--ink); }
+.btn.help {
+  width: 36px; height: 36px; padding: 0; border-radius: 50%; font-size: 16px;
+  font-weight: 700; color: var(--accent2); flex: 0 0 auto;
+}
+.btn.help.danger { color: var(--danger); }
+.btn.help.armed {
+  width: auto; border-radius: 999px; padding: 0 12px; font-size: 12px;
+  background: var(--danger); color: #2a0d0d; border-color: var(--danger);
 }
