@@ -7,6 +7,10 @@ import { render, drawIcon, handlesOf } from './render.js';
 const SAVE_KEY = 'pitagoran.proto.v1';
 const $ = (id) => document.getElementById(id);
 
+// キャラ画像はビルド時に base が付くので、HTMLに書いた src から借りる
+const CHARA_HAPPY = document.getElementById('ovChara').getAttribute('src');
+const CHARA_OOPS = CHARA_HAPPY.replace('chara-nyabbit', 'chara-nyabbit-oops');
+
 const cv = $('cv');
 const ctx = cv.getContext('2d');
 const game = new Game();
@@ -354,6 +358,8 @@ function showOverlay(kind) {
     : 'パーツを うごかして もういちど';
   $('ovNext').style.display = cleared && state.stageIndex < STAGES.length - 1 ? '' : 'none';
   $('ovAgain').textContent = cleared ? 'もういちど' : 'なおす';
+  // ニャビットの表情で結果を伝える（文字より速い）
+  $('ovChara').src = cleared ? CHARA_HAPPY : CHARA_OOPS;
   $('overlay').classList.remove('hidden');
 }
 

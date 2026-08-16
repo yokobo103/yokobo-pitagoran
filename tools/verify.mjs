@@ -9,7 +9,7 @@ import puppeteer from 'puppeteer';
 
 const ROOT = 'dist';
 const PORT = 8145;
-const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml' };
+const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml', '.webp': 'image/webp' };
 
 const server = http.createServer(async (req, res) => {
   const path = req.url.split('?')[0];
@@ -132,6 +132,23 @@ const kanji = await page.evaluate(() => {
   return [...hits];
 });
 
+// --- 1.7 キャラ画像がちゃんと読めているか ---
+// 隠れた要素の img.decode() は解決しないことがあるので、素直に読み直して確かめる
+const images = await page.evaluate(async () => {
+  const inDom = [...document.querySelectorAll('img')].map(i => i.getAttribute('src'));
+  // 失敗時だけ差し替わる画像はDOMに出ていないので足す
+  const oops = inDom.find(s => s.includes('chara-nyabbit'))?.replace('chara-nyabbit', 'chara-nyabbit-oops');
+  const srcs = [...new Set([...inDom, oops].filter(Boolean))];
+  const out = {};
+  await Promise.all(srcs.map(src => new Promise((res) => {
+    const probe = new Image();
+    probe.onload = () => { out[src] = `ok ${probe.naturalWidth}x${probe.naturalHeight}`; res(); };
+    probe.onerror = () => { out[src] = 'よみこめない'; res(); };
+    probe.src = src;
+  })));
+  return out;
+});
+
 // --- 2. 指で触れるか（合成タッチで置く→掴む→回す→消す） ---
 const touch = await page.evaluate(() => {
   const cv = document.getElementById('cv');
@@ -224,6 +241,16 @@ if (process.argv.includes('--shot')) {
   await writeFile('screenshots/verify_page.png', await page.screenshot());
   await page.evaluate(() => document.getElementById('btnHelp').click());
   await writeFile('screenshots/verify_help.png', await page.screenshot());
+  // クリア画面（キャラつき）
+  await page.evaluate(() => {
+    document.getElementById('tutorial').classList.add('hidden');
+    __pita.back(); __pita.load(0); __pita.clear();
+    [['rail', 200, 250, 0.25], ['rail', 300, 570, 0.35]].forEach(p => __pita.put(...p));
+    __pita.play();
+    for (let i = 0; i < 900 && !__pita.game.result; i++) __pita.game.update(16.6667);
+  });
+  await new Promise(r => setTimeout(r, 600));
+  await writeFile('screenshots/verify_clear.png', await page.screenshot());
   // コーチの各ステップも撮る
   await page.evaluate(() => { document.getElementById('tutorial').classList.add('hidden'); coachStart(); });
   const acts = [
@@ -279,6 +306,8 @@ console.log('--- coach  ---', coachDone
   : { expect, seen, twoHoles });
 console.log('--- layout ---', layout);
 console.log('--- kanji  ---', kanji.length ? kanji : 'none (all kana)');
+console.log('--- images ---', images);
 console.log('--- touch  ---', touch);
 console.log('--- stages ---', failed.length ? `FAILED: ${failed.join(', ')}` : `all ${Object.keys(stages).length} clear`);
-process.exit(errors.length || failed.length || kanji.length || !coachDone ? 1 : 0);
+const badImg = Object.values(images).filter(v => v !== 'ok' && !v.startsWith('ok'));
+process.exit(errors.length || failed.length || kanji.length || !coachDone || badImg.length ? 1 : 0);

@@ -26,6 +26,7 @@
         <canvas id="cv"></canvas>
         <div id="overlay" class="overlay hidden">
           <div class="card">
+            <img id="ovChara" class="ovchara" src="/chara-nyabbit.webp" width="362" height="400" alt="" />
             <p id="ovTitle" class="ovTitle">クリア！</p>
             <p id="ovText" class="ovText"></p>
             <div class="ovBtns">
@@ -97,17 +98,28 @@
     <p class="ovTitle">あそびかた</p>
     <ol class="tutlist">
       <li><b>したの パーツをえらぶ</b><br />えらんだら、そのまま なんこでも おけます</li>
-      <li><b>ばんめんを タップして おく</b><br />おいたパーツは <b>ゆびで ひっぱると うごきます</b></li>
-      <li><b>おいたパーツを タップ</b><br />まんなかの <b>まるを よこに うごかすと かたむきます</b>。↺ ↻ でも かわります</li>
+      <li><b>ばんめんを タップして おく</b><br />えらんだ ところに パーツが つきます</li>
+      <li><b>おいたパーツを ゆびで ひっぱる</b><br />すきな ところへ <b>うごかせます</b></li>
+      <li><b>したに でてくる まるを よこに うごかす</b><br /><b>パーツが かたむきます</b>。↺ ↻ でも かわります</li>
       <li><b>▶ スタート</b><br />たまが カゴに はいれば クリア。<b>⟲ リセット</b> で やりなおし</li>
     </ol>
     <p class="tutmini">まちがえたら <b>↩ とりけし</b>。ぜんぶ けすときは みぎうえの 🗑</p>
     <button id="tutCoach" class="btn primary big">さわって おぼえる</button>
     <button id="tutClose" class="btn big">とじる</button>
     <div class="labnote">
+      <div class="labchara">
+        <figure>
+          <img src="/chara-yokobo.webp" width="267" height="400" alt="Dr.よこぼ" />
+          <figcaption>Dr.よこぼ</figcaption>
+        </figure>
+        <figure>
+          <img src="/chara-nyabbit.webp" width="362" height="400" alt="ニャビット" />
+          <figcaption>ニャビット</figcaption>
+        </figure>
+      </div>
       <p class="labtitle">🧪 よこぼの AIラボ</p>
-      <p class="labsub">AIと いっしょに ゲームや どうがを つくって あそんでいる ラボです。<br />
-        このゲームも そこで うまれました。</p>
+      <p class="labsub">この ふたりの ラボです。<br />
+        AIと いっしょに ゲームや どうがを つくって あそんでいます。</p>
       <a class="btn lablink" href="https://yokobo-ai-lab.vercel.app" target="_blank" rel="noopener">ラボを のぞく →</a>
     </div>
   </div>
