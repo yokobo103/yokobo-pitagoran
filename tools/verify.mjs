@@ -24,7 +24,11 @@ const server = http.createServer(async (req, res) => {
 });
 await new Promise(r => server.listen(PORT, r));
 
-const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
+const browser = await puppeteer.launch({
+  headless: true,
+  timeout: 120000,
+  args: ['--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage'],
+});
 const page = await browser.newPage();
 await page.setViewport({ width: 375, height: 812, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
 
@@ -50,6 +54,28 @@ const layout = await page.evaluate(() => {
     viewport: [innerWidth, innerHeight],
     barLines: Math.round(document.querySelector('.bar').getBoundingClientRect().height),
   };
+});
+
+// --- 1.5 画面に漢字が出ていないか（5歳児が読めるように） ---
+const kanji = await page.evaluate(() => {
+  const K = /[一-鿿]/;
+  const hits = new Set();
+  const walk = (root) => {
+    const it = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    let n;
+    while ((n = it.nextNode())) {
+      const t = n.textContent.trim();
+      if (t && K.test(t)) hits.add(t.slice(0, 40));
+    }
+  };
+  // 全ステージのタブ名・ヒント・パーツ名を一度ずつ表示させて調べる
+  for (let i = 0; i < __pita.stages().length; i++) {
+    __pita.load(i);
+    walk(document.body);
+    document.querySelectorAll('[title]').forEach(e => { if (K.test(e.title)) hits.add('title: ' + e.title); });
+  }
+  __pita.load(0);
+  return [...hits];
 });
 
 // --- 2. 指で触れるか（合成タッチで置く→掴む→回す→消す） ---
@@ -142,6 +168,8 @@ if (process.argv.includes('--shot')) {
   await mkdir('screenshots', { recursive: true });
   await page.evaluate(() => { __pita.back(); __pita.load(0); __pita.clear(); });
   await writeFile('screenshots/verify_page.png', await page.screenshot());
+  await page.evaluate(() => document.getElementById('btnHelp').click());
+  await writeFile('screenshots/verify_help.png', await page.screenshot());
 }
 
 await browser.close();
@@ -150,6 +178,7 @@ server.close();
 const failed = Object.entries(stages).filter(([, v]) => v === 'FAIL').map(([k]) => k);
 console.log('--- errors ---', errors.length ? errors : 'none');
 console.log('--- layout ---', layout);
+console.log('--- kanji  ---', kanji.length ? kanji : 'none (all kana)');
 console.log('--- touch  ---', touch);
 console.log('--- stages ---', failed.length ? `FAILED: ${failed.join(', ')}` : `all ${Object.keys(stages).length} clear`);
-process.exit(errors.length || failed.length ? 1 : 0);
+process.exit(errors.length || failed.length || kanji.length ? 1 : 0);

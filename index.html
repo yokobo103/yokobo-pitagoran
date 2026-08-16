@@ -14,15 +14,14 @@
 <body>
 <div class="app">
   <header class="bar">
-    <h1>ピタゴラン試作</h1>
+    <h1>ピタゴラン</h1>
     <button id="btnHelp" class="btn help" title="あそびかた">？</button>
-    <button id="btnClear" class="btn help danger" title="ぜんぶ消す">🗑</button>
+    <button id="btnClear" class="btn help danger" title="ぜんぶ けす">🗑</button>
     <nav id="stageTabs" class="tabs"></nav>
   </header>
 
   <main class="layout">
     <section class="stagewrap">
-      <p id="hint" class="hint"></p>
       <div class="canvasbox">
         <canvas id="cv"></canvas>
         <div id="overlay" class="overlay hidden">
@@ -30,9 +29,12 @@
             <p id="ovTitle" class="ovTitle">クリア！</p>
             <p id="ovText" class="ovText"></p>
             <div class="ovBtns">
-              <button id="ovAgain" class="btn">もう一度</button>
-              <button id="ovNext" class="btn primary">つぎのステージ</button>
+              <button id="ovAgain" class="btn">もういちど</button>
+              <button id="ovNext" class="btn primary">つぎへ</button>
             </div>
+            <a class="labline" href="https://yokobo-ai-lab.vercel.app" target="_blank" rel="noopener">
+              🧪 よこぼの AIラボ
+            </a>
           </div>
         </div>
       </div>
@@ -47,15 +49,15 @@
 
       <!-- 選択中パーツの操作卓。場所は常に確保して、切り替わりを無くす -->
       <div id="selBar" class="selbar">
-        <p id="selHelp" class="selhelp">置いたパーツをタップすると、ここで かたむきを かえられます</p>
+        <p id="selHelp" class="selhelp">おいた パーツを タップすると、ここで かたむきを かえられるよ</p>
         <div id="selCtl" class="selctl hidden">
           <span id="selName" class="selname">レール</span>
-          <button id="selRotL" class="btn round" title="左に15°">↺</button>
+          <button id="selRotL" class="btn round" title="ひだりに まわす">↺</button>
           <input id="selAngle" class="anglerange" type="range" min="-180" max="180" step="15" value="0"
                  aria-label="かたむき" />
-          <button id="selRotR" class="btn round" title="右に15°">↻</button>
+          <button id="selRotR" class="btn round" title="みぎに まわす">↻</button>
           <span id="selDeg" class="seldeg">0°</span>
-          <button id="selDel" class="btn danger" title="このパーツを消す">🗑</button>
+          <button id="selDel" class="btn danger" title="このパーツを けす">🗑</button>
         </div>
       </div>
 
@@ -66,7 +68,7 @@
   </main>
 </div>
 
-<button id="zoomReset" class="zoomreset hidden">🔍 表示をもどす</button>
+<button id="zoomReset" class="zoomreset hidden">🔍 もとの おおきさに</button>
 
 <div id="tutorial" class="tutorial hidden">
   <div class="card tutcard">
@@ -75,9 +77,16 @@
       <li><b>したの パーツをえらぶ</b><br />えらんだら、そのまま なんこでも おけます</li>
       <li><b>ばんめんを タップして おく</b><br />おいたパーツは <b>ゆびで ひっぱると うごきます</b></li>
       <li><b>おいたパーツを タップ</b><br />まんなかの <b>まるを よこに うごかすと かたむきます</b>。↺ ↻ でも かわります</li>
-      <li><b>▶ スタート</b><br />たまが カゴに はいれば クリア。<b>↺もどす</b> で やりなおし</li>
+      <li><b>▶ スタート</b><br />たまが カゴに はいれば クリア。<b>⟲ リセット</b> で やりなおし</li>
     </ol>
+    <p class="tutmini">まちがえたら <b>↩ とりけし</b>。ぜんぶ けすときは みぎうえの 🗑</p>
     <button id="tutClose" class="btn primary big">はじめる</button>
+    <div class="labnote">
+      <p class="labtitle">🧪 よこぼの AIラボ</p>
+      <p class="labsub">AIと いっしょに ゲームや どうがを つくって あそんでいる ラボです。<br />
+        このゲームも そこで うまれました。</p>
+      <a class="btn lablink" href="https://yokobo-ai-lab.vercel.app" target="_blank" rel="noopener">ラボを のぞく →</a>
+    </div>
   </div>
 </div>
 

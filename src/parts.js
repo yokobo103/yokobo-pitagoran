@@ -38,8 +38,8 @@ function wood(ctx, w, h) {
 // w/h（または r）は当たり判定＆エディタの掴み枠にも使う。
 export const PARTS = {
   plate: {
-    label: 'いた（短）',
-    hint: '短い足場。ちょい足しの角度調整に。',
+    label: 'いた',
+    hint: 'みじかい あしば。ちょっとだけ むきを かえたいとき',
     w: 92, h: 12, tint: '#a96c39',
     create(p) {
       return Bodies.rectangle(p.x, p.y, 92, 12, {
@@ -51,8 +51,8 @@ export const PARTS = {
   },
 
   rail: {
-    label: 'レール（長）',
-    hint: '長いすべり台。まずはこれで道を作る。',
+    label: 'ながいいた',
+    hint: 'ながい すべりだい。まずは これで みちを つくる',
     w: 190, h: 12, tint: '#a96c39',
     create(p) {
       return Bodies.rectangle(p.x, p.y, 190, 12, {
@@ -69,7 +69,7 @@ export const PARTS = {
 
   domino: {
     label: 'ドミノ',
-    hint: '倒れて次へ伝える。並べると連鎖する。',
+    hint: 'たおれて つぎへ つたわる。ならべると つぎつぎ たおれる',
     w: 13, h: 84, dynamic: true, tint: '#e8eef6',
     create(p) {
       return Bodies.rectangle(p.x, p.y, 13, 84, {
@@ -96,7 +96,7 @@ export const PARTS = {
 
   weight: {
     label: 'てっきゅう',
-    hint: '重い球。押す・落とす担当。ゴールにも入る。',
+    hint: 'おもい たま。おしたり おとしたり。カゴに はいっても クリア',
     // ドミノに «乗り越えられない» 高さが要るので、玉より一回り大きい
     r: 22, w: 44, h: 44, dynamic: true, tint: '#8894a6',
     create(p) {
@@ -115,8 +115,8 @@ export const PARTS = {
   },
 
   jump: {
-    label: 'ジャンプ台',
-    hint: '触れたものを板の向きへ打ち上げる。',
+    label: 'ジャンプだい',
+    hint: 'さわったものを いたの むきへ うちあげる',
     w: 78, h: 26, kind: 'jump', power: 10.5, tint: '#f0a03c',
     create(p) {
       return Bodies.rectangle(p.x, p.y, 78, 14, {
@@ -142,7 +142,7 @@ export const PARTS = {
 
   fan: {
     label: 'せんぷうき',
-    hint: '前方にずっと風を送る。軽いものがよく飛ぶ。',
+    hint: 'まえに ずっと かぜを おくる。かるいものが よく とぶ',
     w: 52, h: 52, kind: 'fan', reach: 230, force: 0.0012, tint: '#5ec8e5',
     create(p) {
       return Bodies.rectangle(p.x, p.y, 46, 46, {
@@ -178,7 +178,7 @@ export const PARTS = {
 
   belt: {
     label: 'ベルコン',
-    hint: '乗ったものを矢印の向きへ運ぶ。',
+    hint: 'のったものを やじるしの ほうへ はこぶ',
     w: 132, h: 20, kind: 'belt', speed: 5.4, tint: '#7bd88f',
     create(p) {
       return Bodies.rectangle(p.x, p.y, 132, 16, {
@@ -201,7 +201,7 @@ export const PARTS = {
 
   tramp: {
     label: 'トランポリン',
-    hint: '来た勢いをそのまま返す。速く当たるほど高く跳ぶ。',
+    hint: 'きた いきおいを かえす。はやいほど たかく とぶ',
     w: 96, h: 20, kind: 'tramp', gain: 1.3, tint: '#9b7bff',
     create(p) {
       return Bodies.rectangle(p.x, p.y, 96, 12, {
@@ -225,7 +225,7 @@ export const PARTS = {
 
   pendulum: {
     label: 'ふりこ',
-    hint: '軸からぶら下がって揺れる。当たると大きく弾きとばす。',
+    hint: 'じくから ぶらさがって ゆれる。あたると はじきとばす',
     w: 44, h: 44, kind: 'pendulum', len: 104, dynamic: true, tint: '#f2b35c',
     create(p) {
       const len = PARTS.pendulum.len;
@@ -276,7 +276,7 @@ export const PARTS = {
 
   seesaw: {
     label: 'シーソー',
-    hint: '真ん中の軸で傾く板。重さで道が変わる。',
+    hint: 'まんなかで かたむく いた。おもさで みちが かわる',
     w: 154, h: 14, kind: 'seesaw', dynamic: true, tint: '#e0729a',
     create(p) {
       const plank = Bodies.rectangle(p.x, p.y, 154, 14, {

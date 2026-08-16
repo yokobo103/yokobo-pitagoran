@@ -112,7 +112,8 @@ function refreshSelBar() {
   bar.classList.toggle('active', on);
   $('selCtl').classList.toggle('hidden', !on);
   $('selHelp').style.display = on ? 'none' : '';
-  if (!on) return;
+  // 選んでいないときは «そのステージの目的» を出す。スマホでは他に出す場所がない
+  if (!on) { $('selHelp').textContent = stage().hint; return; }
   $('selName').textContent = PARTS[p.type].label;
   const deg = degOf(p.angle);
   $('selDeg').textContent = `${deg}°`;
@@ -141,7 +142,6 @@ function loadStage(i) {
   game.reset(stage(), state.placed);
   buildTabs();
   buildPalette();
-  $('hint').textContent = stage().hint;
 }
 
 function buildTabs() {
@@ -344,10 +344,10 @@ function showOverlay(kind) {
   $('ovTitle').textContent = cleared ? 'クリア！' : 'とどかなかった…';
   $('ovTitle').style.color = cleared ? 'var(--accent)' : '#ff8f8f';
   $('ovText').textContent = cleared
-    ? `${(game.elapsed / 1000).toFixed(1)}秒でカゴに入りました`
-    : 'パーツの角度と位置を直して、もう一度。';
+    ? `${(game.elapsed / 1000).toFixed(1)}びょうで カゴに はいったよ`
+    : 'パーツを うごかして もういちど';
   $('ovNext').style.display = cleared && state.stageIndex < STAGES.length - 1 ? '' : 'none';
-  $('ovAgain').textContent = cleared ? 'もう一度' : 'なおす';
+  $('ovAgain').textContent = cleared ? 'もういちど' : 'なおす';
   $('overlay').classList.remove('hidden');
 }
 
