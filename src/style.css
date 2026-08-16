@@ -189,6 +189,28 @@ canvas#cv {
   .pitem { flex: 1 1 74px; }
 }
 
+/* さわって進むチュートリアル。«穴» のまわりだけ暗くして、中身はそのまま触れる */
+.coach { position: fixed; inset: 0; z-index: 50; pointer-events: none; }
+.coach.hidden { display: none; }
+.coachhole {
+  position: absolute; border-radius: 14px; border: 3px solid var(--accent2);
+  transition: left .28s ease, top .28s ease, width .28s ease, height .28s ease;
+  animation: coachpulse 1.5s ease-in-out infinite;
+}
+@keyframes coachpulse {
+  0%, 100% { box-shadow: 0 0 0 9999px rgba(6, 11, 22, .74), 0 0 0 0 rgba(126, 224, 255, .5); }
+  50%      { box-shadow: 0 0 0 9999px rgba(6, 11, 22, .74), 0 0 0 14px rgba(126, 224, 255, 0); }
+}
+.coachtip {
+  position: absolute; width: 254px; pointer-events: auto;
+  background: var(--panel); border: 1px solid var(--accent2); border-radius: 12px;
+  padding: 10px 14px 8px; box-shadow: 0 12px 34px rgba(0, 0, 0, .55);
+  transition: left .28s ease, top .28s ease;
+}
+.coachstep { margin: 0 0 3px; font-size: 10.5px; color: var(--accent2); letter-spacing: .1em; }
+.coachtext { margin: 0 0 6px; font-size: 13.5px; line-height: 1.6; font-weight: 700; }
+.coachtip .btn.ghost { padding: 3px 8px; font-size: 11px; }
+
 /* あそびかた */
 .tutorial {
   position: fixed; inset: 0; z-index: 40; display: grid; place-items: center;

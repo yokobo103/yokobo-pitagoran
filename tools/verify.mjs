@@ -40,9 +40,45 @@ await page.goto(`http://localhost:${PORT}/`, { waitUntil: 'networkidle0' });
 await page.evaluate(() => localStorage.clear());
 await page.reload({ waitUntil: 'networkidle0' });
 
+// --- 0. さわって進むチュートリアルが最後まで通るか ---
+await new Promise(r => setTimeout(r, 500));
+const coachSteps = [];
+const coachOk = await page.evaluate(async () => {
+  const log = [];
+  const wait = (ms) => new Promise(r => setTimeout(r, ms));
+  const cv = document.getElementById('cv');
+  const at = (wx, wy) => { const r = cv.getBoundingClientRect(); return { clientX: r.left + wx / 540 * r.width, clientY: r.top + wy / 810 * r.height }; };
+  const tap = (wx, wy) => {
+    for (const t of ['pointerdown', 'pointerup']) cv.dispatchEvent(new PointerEvent(t, { bubbles: true, pointerId: 1, pointerType: 'touch', ...at(wx, wy) }));
+  };
+  const snap = () => {
+    const c = document.getElementById('coach');
+    if (c.classList.contains('hidden')) return null;
+    const h = document.getElementById('coachHole').getBoundingClientRect();
+    return { step: document.getElementById('coachStep').textContent, text: document.getElementById('coachText').textContent, hole: [Math.round(h.width), Math.round(h.height)] };
+  };
+  log.push(snap());                                        // 1 パレット
+  document.querySelectorAll('.pitem')[0].click(); await wait(400);
+  log.push(snap());                                        // 2 ばんめん
+  tap(250, 300); await wait(400);
+  log.push(snap());                                        // 3 おいたパーツ
+  tap(250, 300); await wait(400);
+  log.push(snap());                                        // 4 スライダー
+  const sl = document.getElementById('selAngle');
+  sl.value = '30'; sl.dispatchEvent(new Event('input', { bubbles: true })); await wait(400);
+  log.push(snap());                                        // 5 スタート
+  document.getElementById('btnPlay').click(); await wait(400);
+  log.push(snap());                                        // 終了 → null
+  return log;
+});
+coachSteps.push(...coachOk);
+await page.evaluate(() => { __pita.back(); __pita.load(0); __pita.clear(); localStorage.clear(); });
+await page.reload({ waitUntil: 'networkidle0' });
+await page.evaluate(() => { document.getElementById('coachSkip').click(); });
+
 // --- 1. レイアウト ---
 const layout = await page.evaluate(() => {
-  document.getElementById('tutClose').click();
+  document.getElementById('tutorial').classList.add('hidden');
   const r = (sel) => { const b = document.querySelector(sel).getBoundingClientRect(); return [Math.round(b.width), Math.round(b.height)]; };
   return {
     canvas: r('#cv'),
@@ -170,15 +206,30 @@ if (process.argv.includes('--shot')) {
   await writeFile('screenshots/verify_page.png', await page.screenshot());
   await page.evaluate(() => document.getElementById('btnHelp').click());
   await writeFile('screenshots/verify_help.png', await page.screenshot());
+  // コーチの各ステップも撮る
+  await page.evaluate(() => { document.getElementById('tutorial').classList.add('hidden'); coachStart(); });
+  for (let i = 1; i <= 3; i++) {
+    await new Promise(r => setTimeout(r, 450));
+    await writeFile(`screenshots/verify_coach${i}.png`, await page.screenshot());
+    await page.evaluate((n) => {
+      const cv = document.getElementById('cv');
+      const r = cv.getBoundingClientRect();
+      const ev = (t, wx, wy) => cv.dispatchEvent(new PointerEvent(t, { bubbles: true, pointerId: 1, pointerType: 'touch', clientX: r.left + wx / 540 * r.width, clientY: r.top + wy / 810 * r.height }));
+      if (n === 1) document.querySelectorAll('.pitem')[0].click();
+      else { ev('pointerdown', 250, 300); ev('pointerup', 250, 300); }
+    }, i);
+  }
 }
 
 await browser.close();
 server.close();
 
 const failed = Object.entries(stages).filter(([, v]) => v === 'FAIL').map(([k]) => k);
+const coachDone = coachSteps.length === 6 && coachSteps.slice(0, 5).every(Boolean) && coachSteps[5] === null;
 console.log('--- errors ---', errors.length ? errors : 'none');
+console.log('--- coach  ---', coachDone ? '5ステップ通過→自動で終了' : coachSteps);
 console.log('--- layout ---', layout);
 console.log('--- kanji  ---', kanji.length ? kanji : 'none (all kana)');
 console.log('--- touch  ---', touch);
 console.log('--- stages ---', failed.length ? `FAILED: ${failed.join(', ')}` : `all ${Object.keys(stages).length} clear`);
-process.exit(errors.length || failed.length || kanji.length ? 1 : 0);
+process.exit(errors.length || failed.length || kanji.length || !coachDone ? 1 : 0);

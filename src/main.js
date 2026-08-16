@@ -126,6 +126,7 @@ function setAngle(p, deg) {
   state.ghostAngle = p.angle;
   save();
   refreshSelBar();
+  coach.notify('rotate');
 }
 
 function loadStage(i) {
@@ -181,6 +182,7 @@ function buildPalette() {
       state.selectedType = state.selectedType === type ? null : type;
       state.selectedUid = null;
       refreshPalette();
+      if (state.selectedType) coach.notify('pick');
     };
     list.appendChild(b);
     drawIcon(icon, type);
@@ -292,6 +294,7 @@ function place(x, y) {
   if (remaining(type) <= 0) state.selectedType = null;
   save();
   refreshPalette();
+  coach.notify('place');
 }
 
 // 回転の相手：カーソルの下 ＞ 選択中のパーツ ＞ これから置くゴースト
@@ -329,6 +332,7 @@ function play() {
   state.running = true;
   hideOverlay();
   refreshPalette();
+  coach.notify('play');
 }
 
 function back() {
@@ -383,6 +387,7 @@ cv.addEventListener('pointerdown', (e) => {
     state.ghost = null;
     pushHistory();
     state.drag = { uid: hit.uid, mode: 'move', dx: hit.x - x, dy: hit.y - y };
+    coach.notify('select');
   } else if (state.selectedType) {
     place(snap(x, !e.shiftKey), snap(y, !e.shiftKey));
   } else {
@@ -445,15 +450,116 @@ window.addEventListener('keydown', (e) => {
 
 $('btnPlay').onclick = play;
 $('btnReset').onclick = back;
+// --- さわって進むチュートリアル ---
+// 光った所を «実際に操作する» と次へ進む。読ませずに手で覚えてもらう。
+const coach = {
+  i: -1,
+  active: false,
+  steps: [
+    {
+      on: 'pick', text: 'まず したの パーツを えらぼう',
+      target: () => document.querySelector('.pitem'),
+    },
+    {
+      on: 'place', text: 'ばんめんを タップして おいてみよう',
+      target: () => cv.getBoundingClientRect(),
+    },
+    {
+      on: 'select', text: 'おいた パーツを タップしてみて',
+      target: () => partRect(),
+    },
+    {
+      on: 'rotate', text: 'まるを よこに うごかすと かたむくよ',
+      target: () => $('selAngle'),
+    },
+    {
+      on: 'play', text: 'できた！ ▶ スタート を おしてみよう',
+      target: () => $('btnPlay'),
+    },
+  ],
+
+  start() {
+    loadStage(0);
+    state.placed = [];
+    history = [];
+    save();
+    refreshPalette();
+    $('tutorial').classList.add('hidden');
+    this.active = true;
+    this.i = -1;
+    this.next();
+  },
+
+  next() {
+    this.i++;
+    if (this.i >= this.steps.length) return this.stop();
+    $('coach').classList.remove('hidden');
+    this.show();
+  },
+
+  show() {
+    const step = this.steps[this.i];
+    if (!step) return;
+    const t = step.target();
+    const r = t instanceof Element ? t.getBoundingClientRect() : t;
+    if (!r || !r.width) return this.stop();
+
+    const pad = 7;
+    const hole = $('coachHole');
+    hole.style.left = `${r.left - pad}px`;
+    hole.style.top = `${r.top - pad}px`;
+    hole.style.width = `${r.width + pad * 2}px`;
+    hole.style.height = `${r.height + pad * 2}px`;
+
+    $('coachStep').textContent = `${this.i + 1} / ${this.steps.length}`;
+    $('coachText').textContent = step.text;
+
+    // 光っている所を隠さない側に吹き出しを出す
+    const tip = $('coachTip');
+    const h = tip.offsetHeight || 90;
+    const above = r.top > h + 24;
+    tip.style.top = `${above ? r.top - h - 16 : r.top + r.height + 16}px`;
+    tip.style.left = `${Math.max(8, Math.min(window.innerWidth - tip.offsetWidth - 8, r.left + r.width / 2 - tip.offsetWidth / 2))}px`;
+  },
+
+  notify(ev) {
+    if (!this.active) return;
+    const step = this.steps[this.i];
+    if (step && step.on === ev) setTimeout(() => this.next(), 260);
+  },
+
+  stop() {
+    this.active = false;
+    $('coach').classList.add('hidden');
+    localStorage.setItem(TUT_KEY, '1');
+  },
+};
+
+// 置いたパーツの «画面上» の位置（盤面はワールド座標なので変換する）
+function partRect() {
+  const p = state.placed[state.placed.length - 1];
+  const r = cv.getBoundingClientRect();
+  if (!p) return r;
+  const sx = r.width / WORLD_W;
+  const sy = r.height / WORLD_H;
+  const spec = PARTS[p.type];
+  const w = Math.max(spec.w, 70) * sx;
+  const h = Math.max(spec.h, 70) * sy;
+  return { left: r.left + p.x * sx - w / 2, top: r.top + p.y * sy - h / 2, width: w, height: h };
+}
+
+$('coachSkip').onclick = () => coach.stop();
+window.addEventListener('resize', () => { if (coach.active) coach.show(); });
+
 // --- あそびかた（初回だけ自動で出す） ---
 const TUT_KEY = 'pitagoran.tutorial.seen';
 const showTutorial = () => $('tutorial').classList.remove('hidden');
-$('btnHelp').onclick = showTutorial;
+$('btnHelp').onclick = () => { coach.stop(); showTutorial(); };
 $('tutClose').onclick = () => {
   $('tutorial').classList.add('hidden');
   localStorage.setItem(TUT_KEY, '1');
 };
-if (!localStorage.getItem(TUT_KEY)) showTutorial();
+$('tutCoach').onclick = () => coach.start();
 
 // --- 選択中パーツの操作卓 ---
 $('selAngle').addEventListener('input', (e) => {
@@ -529,9 +635,13 @@ window.__pita = {
   },
   draw: (t = 0) => drawFrame(t * 1000),
 };
+window.coachStart = () => coach.start();
 
 blockZoomGestures();
 setupZoomEscape();
 setupCanvas();
 loadStage(0);
 requestAnimationFrame(loop);
+
+// はじめて来た人は、読ませずに «さわって覚える» 方へ案内する
+if (!localStorage.getItem(TUT_KEY)) setTimeout(() => coach.start(), 250);

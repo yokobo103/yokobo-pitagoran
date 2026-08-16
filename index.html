@@ -70,6 +70,16 @@
 
 <button id="zoomReset" class="zoomreset hidden">🔍 もとの おおきさに</button>
 
+<!-- さわって進むチュートリアル。光った所を操作すると次へ進む -->
+<div id="coach" class="coach hidden">
+  <div id="coachHole" class="coachhole"></div>
+  <div id="coachTip" class="coachtip">
+    <p id="coachStep" class="coachstep"></p>
+    <p id="coachText" class="coachtext"></p>
+    <button id="coachSkip" class="btn ghost">とばす</button>
+  </div>
+</div>
+
 <div id="tutorial" class="tutorial hidden">
   <div class="card tutcard">
     <p class="ovTitle">あそびかた</p>
@@ -80,7 +90,8 @@
       <li><b>▶ スタート</b><br />たまが カゴに はいれば クリア。<b>⟲ リセット</b> で やりなおし</li>
     </ol>
     <p class="tutmini">まちがえたら <b>↩ とりけし</b>。ぜんぶ けすときは みぎうえの 🗑</p>
-    <button id="tutClose" class="btn primary big">はじめる</button>
+    <button id="tutCoach" class="btn primary big">さわって おぼえる</button>
+    <button id="tutClose" class="btn big">とじる</button>
     <div class="labnote">
       <p class="labtitle">🧪 よこぼの AIラボ</p>
       <p class="labsub">AIと いっしょに ゲームや どうがを つくって あそんでいる ラボです。<br />
