@@ -48,21 +48,31 @@ const coachOk = await page.evaluate(async () => {
   const wait = (ms) => new Promise(r => setTimeout(r, ms));
   const cv = document.getElementById('cv');
   const at = (wx, wy) => { const r = cv.getBoundingClientRect(); return { clientX: r.left + wx / 540 * r.width, clientY: r.top + wy / 810 * r.height }; };
-  const tap = (wx, wy) => {
-    for (const t of ['pointerdown', 'pointerup']) cv.dispatchEvent(new PointerEvent(t, { bubbles: true, pointerId: 1, pointerType: 'touch', ...at(wx, wy) }));
+  const ev = (t, wx, wy) => cv.dispatchEvent(new PointerEvent(t, { bubbles: true, pointerId: 1, pointerType: 'touch', ...at(wx, wy) }));
+  const tap = (wx, wy) => { ev('pointerdown', wx, wy); ev('pointerup', wx, wy); };
+  const drag = (wx, wy, tx, ty) => {
+    ev('pointerdown', wx, wy);
+    for (let i = 1; i <= 6; i++) ev('pointermove', wx + (tx - wx) * i / 6, wy + (ty - wy) * i / 6);
+    ev('pointerup', tx, ty);
   };
   const snap = () => {
     const c = document.getElementById('coach');
     if (c.classList.contains('hidden')) return null;
     const h = document.getElementById('coachHole').getBoundingClientRect();
-    return { step: document.getElementById('coachStep').textContent, text: document.getElementById('coachText').textContent, hole: [Math.round(h.width), Math.round(h.height)] };
+    return {
+      step: document.getElementById('coachStep').textContent,
+      text: document.getElementById('coachText').textContent,
+      hole: [Math.round(h.width), Math.round(h.height)],
+      // «変わる所» の2つ目の穴が出ているか
+      hole2: !document.getElementById('coachHole2').classList.contains('hidden'),
+    };
   };
   log.push(snap());                                        // 1 パレット
   document.querySelectorAll('.pitem')[0].click(); await wait(400);
   log.push(snap());                                        // 2 ばんめん
   tap(250, 300); await wait(400);
-  log.push(snap());                                        // 3 おいたパーツ
-  tap(250, 300); await wait(400);
+  log.push(snap());                                        // 3 ひっぱって うごかす
+  drag(250, 300, 250, 380); await wait(400);
   log.push(snap());                                        // 4 スライダー
   // 実際のドラッグは input が何十回も飛ぶ。1回だけだと «進みすぎ» を見逃す
   const sl = document.getElementById('selAngle');
@@ -233,7 +243,11 @@ if (process.argv.includes('--shot')) {
       const fns = [
         () => document.querySelectorAll('.pitem')[0].click(),
         () => { ev('pointerdown', 250, 300); ev('pointerup', 250, 300); },
-        () => { ev('pointerdown', 250, 300); ev('pointerup', 250, 300); },
+        () => {
+          ev('pointerdown', 250, 300);
+          for (let i = 1; i <= 6; i++) ev('pointermove', 250, 300 + i * 14);
+          ev('pointerup', 250, 384);
+        },
         () => {
           const s = document.getElementById('selAngle');
           for (const v of [15, 30, 45, 30, 15]) { s.value = String(v); s.dispatchEvent(new Event('input', { bubbles: true })); }
@@ -255,10 +269,14 @@ const failed = Object.entries(stages).filter(([, v]) => v === 'FAIL').map(([k]) 
 // 各スナップが «期待どおりの番号» を出しているかまで見る（進みすぎの検出）
 const expect = ['1 / 7', '2 / 7', '3 / 7', '4 / 7', '5 / 7', '6 / 7', '7 / 7'];
 const seen = coachSteps.slice(0, 7).map(s => (s ? s.step : 'なし'));
+// 4歩目（かたむき）では «変わる所» の穴も出ていること
+const twoHoles = coachSteps[3] && coachSteps[3].hole2 === true;
 const coachDone = coachSteps.length === 8 && coachSteps[7] === null
-  && expect.every((e, i) => seen[i] === e);
+  && expect.every((e, i) => seen[i] === e) && twoHoles;
 console.log('--- errors ---', errors.length ? errors : 'none');
-console.log('--- coach  ---', coachDone ? '7ステップを順に通過→自動で終了' : { expect, seen });
+console.log('--- coach  ---', coachDone
+  ? '7ステップを順に通過→自動で終了（かたむきは穴2つ）'
+  : { expect, seen, twoHoles });
 console.log('--- layout ---', layout);
 console.log('--- kanji  ---', kanji.length ? kanji : 'none (all kana)');
 console.log('--- touch  ---', touch);

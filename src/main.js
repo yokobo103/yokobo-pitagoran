@@ -388,8 +388,7 @@ cv.addEventListener('pointerdown', (e) => {
     state.selectedType = null;
     state.ghost = null;
     pushHistory();
-    state.drag = { uid: hit.uid, mode: 'move', dx: hit.x - x, dy: hit.y - y };
-    coach.notify('select');
+    state.drag = { uid: hit.uid, mode: 'move', dx: hit.x - x, dy: hit.y - y, moved: 0 };
   } else if (state.selectedType) {
     place(snap(x, !e.shiftKey), snap(y, !e.shiftKey));
   } else {
@@ -411,9 +410,12 @@ cv.addEventListener('pointermove', (e) => {
       state.ghostAngle = p.angle;
       refreshSelBar();
     } else {
+      const ox = p.x, oy = p.y;
       p.x = snap(x + state.drag.dx, !e.shiftKey);
       p.y = snap(y + state.drag.dy, !e.shiftKey);
       clampToBoard(p);
+      state.drag.moved = (state.drag.moved || 0) + Math.hypot(p.x - ox, p.y - oy);
+      if (state.drag.moved > 24) coach.notify('move');
     }
     return;
   }
@@ -467,12 +469,14 @@ const coach = {
       target: () => cv.getBoundingClientRect(),
     },
     {
-      on: 'select', text: 'おいた パーツを タップしてみて',
+      on: 'move', text: 'おいた パーツを ゆびで ひっぱって うごかしてみよう',
       target: () => partRect(),
     },
     {
-      on: 'rotate', text: 'まるを よこに うごかすと かたむくよ',
+      // «さわる所»（スライダー）と «変わる所»（パーツ）を同時に光らせる
+      on: 'rotate', text: 'まるを よこに うごかすと パーツが かたむくよ',
       target: () => $('selAngle'),
+      also: () => partRect(),
     },
     {
       on: 'play', text: 'できた！ ▶ スタート を おしてみよう',
@@ -535,10 +539,22 @@ const coach = {
     const hole = $('coachHole');
     // 小さいものには指を添える。盤面のような大きい枠には要らない
     hole.classList.toggle('withhand', r.width < 220);
-    hole.style.left = `${r.left - pad}px`;
-    hole.style.top = `${r.top - pad}px`;
-    hole.style.width = `${r.width + pad * 2}px`;
-    hole.style.height = `${r.height + pad * 2}px`;
+    setBox(hole, r, pad);
+    setMaskHole('coachHoleA', r, pad);
+
+    // «変わる所» の穴（あれば）
+    const r2 = step.also ? step.also() : null;
+    const hole2 = $('coachHole2');
+    hole2.classList.toggle('hidden', !r2);
+    if (r2) { setBox(hole2, r2, pad); setMaskHole('coachHoleB', r2, pad); }
+    else setMaskHole('coachHoleB', { left: -99, top: -99, width: 0, height: 0 }, 0);
+
+    const bg = { width: window.innerWidth, height: window.innerHeight };
+    for (const id of ['coachMaskBg', 'coachDim']) {
+      const el = document.getElementById(id);
+      el.setAttribute('width', bg.width);
+      el.setAttribute('height', bg.height);
+    }
 
     $('coachStep').textContent = `${this.i + 1} / ${this.steps.length}`;
     $('coachText').textContent = step.text;
@@ -569,9 +585,24 @@ const coach = {
   },
 };
 
+const setBox = (el, r, pad) => {
+  el.style.left = `${r.left - pad}px`;
+  el.style.top = `${r.top - pad}px`;
+  el.style.width = `${r.width + pad * 2}px`;
+  el.style.height = `${r.height + pad * 2}px`;
+};
+
+const setMaskHole = (id, r, pad) => {
+  const el = document.getElementById(id);
+  el.setAttribute('x', r.left - pad);
+  el.setAttribute('y', r.top - pad);
+  el.setAttribute('width', Math.max(0, r.width + pad * 2));
+  el.setAttribute('height', Math.max(0, r.height + pad * 2));
+};
+
 // 置いたパーツの «画面上» の位置（盤面はワールド座標なので変換する）
 function partRect() {
-  const p = state.placed[state.placed.length - 1];
+  const p = selected() || state.placed[state.placed.length - 1];
   const r = cv.getBoundingClientRect();
   if (!p) return r;
   const sx = r.width / WORLD_W;

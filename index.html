@@ -72,7 +72,19 @@
 
 <!-- さわって進むチュートリアル。光った所を操作すると次へ進む -->
 <div id="coach" class="coach hidden">
+  <!-- 暗幕はSVGマスク。穴を2つ開けて «さわる所» と «変わる所» を同時に見せる -->
+  <svg class="coachmask" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <mask id="coachHoles" maskUnits="userSpaceOnUse">
+        <rect id="coachMaskBg" x="0" y="0" fill="#fff" />
+        <rect id="coachHoleA" rx="14" fill="#000" />
+        <rect id="coachHoleB" rx="14" fill="#000" />
+      </mask>
+    </defs>
+    <rect id="coachDim" x="0" y="0" fill="rgba(6,11,22,.82)" mask="url(#coachHoles)" />
+  </svg>
   <div id="coachHole" class="coachhole"><span class="coachhand">👆</span></div>
+  <div id="coachHole2" class="coachhole2 hidden"><span class="coachwatch">みてて</span></div>
   <div id="coachTip" class="coachtip">
     <p id="coachStep" class="coachstep"></p>
     <p id="coachText" class="coachtext"></p>
