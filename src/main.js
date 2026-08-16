@@ -41,6 +41,7 @@ function undo() {
   state.drag = null;
   save();
   refreshPalette();
+  coach.notify('undo');
 }
 
 // ---------- 保存 ----------
@@ -340,6 +341,7 @@ function back() {
   game.reset(stage(), state.placed);
   hideOverlay();
   refreshPalette();
+  coach.notify('reset');
 }
 
 function showOverlay(kind) {
@@ -476,6 +478,15 @@ const coach = {
       on: 'play', text: 'できた！ ▶ スタート を おしてみよう',
       target: () => $('btnPlay'),
     },
+    {
+      // 玉が転がるのを少し見せてから
+      on: 'reset', text: 'たまを もどすときは ⟲ リセット', wait: 2600,
+      target: () => $('btnReset'),
+    },
+    {
+      on: 'undo', text: 'まちがえたら ↩ とりけし。ひとつ もどせるよ',
+      target: () => $('btnUndo'),
+    },
   ],
 
   start() {
@@ -493,8 +504,17 @@ const coach = {
   next() {
     this.i++;
     if (this.i >= this.steps.length) return this.stop();
-    $('coach').classList.remove('hidden');
-    this.show();
+    const step = this.steps[this.i];
+    const go = () => { $('coach').classList.remove('hidden'); this.show(); };
+    if (step.wait) { $('coach').classList.add('hidden'); this.mark(null); setTimeout(go, step.wait); }
+    else go();
+  },
+
+  // 光っている «当の要素» にも動きを付ける（枠だけでは気づきにくい）
+  mark(el) {
+    if (this.marked) this.marked.classList.remove('coach-target');
+    this.marked = el instanceof Element ? el : null;
+    if (this.marked) this.marked.classList.add('coach-target');
   },
 
   show() {
@@ -503,9 +523,12 @@ const coach = {
     const t = step.target();
     const r = t instanceof Element ? t.getBoundingClientRect() : t;
     if (!r || !r.width) return this.stop();
+    this.mark(t);
 
     const pad = 7;
     const hole = $('coachHole');
+    // 小さいものには指を添える。盤面のような大きい枠には要らない
+    hole.classList.toggle('withhand', r.width < 220);
     hole.style.left = `${r.left - pad}px`;
     hole.style.top = `${r.top - pad}px`;
     hole.style.width = `${r.width + pad * 2}px`;
@@ -530,6 +553,7 @@ const coach = {
 
   stop() {
     this.active = false;
+    this.mark(null);
     $('coach').classList.add('hidden');
     localStorage.setItem(TUT_KEY, '1');
   },

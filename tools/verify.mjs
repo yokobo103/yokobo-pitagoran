@@ -67,7 +67,11 @@ const coachOk = await page.evaluate(async () => {
   const sl = document.getElementById('selAngle');
   sl.value = '30'; sl.dispatchEvent(new Event('input', { bubbles: true })); await wait(400);
   log.push(snap());                                        // 5 スタート
-  document.getElementById('btnPlay').click(); await wait(400);
+  document.getElementById('btnPlay').click(); await wait(3000);
+  log.push(snap());                                        // 6 リセット（玉を見せてから）
+  document.getElementById('btnReset').click(); await wait(400);
+  log.push(snap());                                        // 7 とりけし
+  document.getElementById('btnUndo').click(); await wait(400);
   log.push(snap());                                        // 終了 → null
   return log;
 });
@@ -208,26 +212,43 @@ if (process.argv.includes('--shot')) {
   await writeFile('screenshots/verify_help.png', await page.screenshot());
   // コーチの各ステップも撮る
   await page.evaluate(() => { document.getElementById('tutorial').classList.add('hidden'); coachStart(); });
-  for (let i = 1; i <= 3; i++) {
-    await new Promise(r => setTimeout(r, 450));
-    await writeFile(`screenshots/verify_coach${i}.png`, await page.screenshot());
+  const acts = [
+    () => document.querySelectorAll('.pitem')[0].click(),
+    'tap', 'tap',
+    () => { const s = document.getElementById('selAngle'); s.value = '30'; s.dispatchEvent(new Event('input', { bubbles: true })); },
+    () => document.getElementById('btnPlay').click(),
+    () => document.getElementById('btnReset').click(),
+  ];
+  for (let i = 0; i < acts.length; i++) {
+    await new Promise(r => setTimeout(r, i === 5 ? 3000 : 500));
+    await writeFile(`screenshots/verify_coach${i + 1}.png`, await page.screenshot());
     await page.evaluate((n) => {
       const cv = document.getElementById('cv');
       const r = cv.getBoundingClientRect();
       const ev = (t, wx, wy) => cv.dispatchEvent(new PointerEvent(t, { bubbles: true, pointerId: 1, pointerType: 'touch', clientX: r.left + wx / 540 * r.width, clientY: r.top + wy / 810 * r.height }));
-      if (n === 1) document.querySelectorAll('.pitem')[0].click();
-      else { ev('pointerdown', 250, 300); ev('pointerup', 250, 300); }
+      const fns = [
+        () => document.querySelectorAll('.pitem')[0].click(),
+        () => { ev('pointerdown', 250, 300); ev('pointerup', 250, 300); },
+        () => { ev('pointerdown', 250, 300); ev('pointerup', 250, 300); },
+        () => { const s = document.getElementById('selAngle'); s.value = '30'; s.dispatchEvent(new Event('input', { bubbles: true })); },
+        () => document.getElementById('btnPlay').click(),
+        () => document.getElementById('btnReset').click(),
+      ];
+      fns[n]();
     }, i);
   }
+  await new Promise(r => setTimeout(r, 500));
+  await writeFile('screenshots/verify_coach7.png', await page.screenshot());
 }
 
 await browser.close();
 server.close();
 
 const failed = Object.entries(stages).filter(([, v]) => v === 'FAIL').map(([k]) => k);
-const coachDone = coachSteps.length === 6 && coachSteps.slice(0, 5).every(Boolean) && coachSteps[5] === null;
+const N = coachSteps.length - 1;
+const coachDone = N === 7 && coachSteps.slice(0, N).every(Boolean) && coachSteps[N] === null;
 console.log('--- errors ---', errors.length ? errors : 'none');
-console.log('--- coach  ---', coachDone ? '5ステップ通過→自動で終了' : coachSteps);
+console.log('--- coach  ---', coachDone ? `${N}ステップ通過→自動で終了` : coachSteps);
 console.log('--- layout ---', layout);
 console.log('--- kanji  ---', kanji.length ? kanji : 'none (all kana)');
 console.log('--- touch  ---', touch);
