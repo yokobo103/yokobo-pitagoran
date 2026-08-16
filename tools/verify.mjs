@@ -64,8 +64,12 @@ const coachOk = await page.evaluate(async () => {
   log.push(snap());                                        // 3 おいたパーツ
   tap(250, 300); await wait(400);
   log.push(snap());                                        // 4 スライダー
+  // 実際のドラッグは input が何十回も飛ぶ。1回だけだと «進みすぎ» を見逃す
   const sl = document.getElementById('selAngle');
-  sl.value = '30'; sl.dispatchEvent(new Event('input', { bubbles: true })); await wait(400);
+  for (const v of [15, 30, 45, 60, 45, 30, 15, 0, -15, -30, -45, -30, -15, 0, 15]) {
+    sl.value = String(v); sl.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  await wait(500);
   log.push(snap());                                        // 5 スタート
   document.getElementById('btnPlay').click(); await wait(3000);
   log.push(snap());                                        // 6 リセット（玉を見せてから）
@@ -230,7 +234,10 @@ if (process.argv.includes('--shot')) {
         () => document.querySelectorAll('.pitem')[0].click(),
         () => { ev('pointerdown', 250, 300); ev('pointerup', 250, 300); },
         () => { ev('pointerdown', 250, 300); ev('pointerup', 250, 300); },
-        () => { const s = document.getElementById('selAngle'); s.value = '30'; s.dispatchEvent(new Event('input', { bubbles: true })); },
+        () => {
+          const s = document.getElementById('selAngle');
+          for (const v of [15, 30, 45, 30, 15]) { s.value = String(v); s.dispatchEvent(new Event('input', { bubbles: true })); }
+        },
         () => document.getElementById('btnPlay').click(),
         () => document.getElementById('btnReset').click(),
       ];
@@ -245,10 +252,13 @@ await browser.close();
 server.close();
 
 const failed = Object.entries(stages).filter(([, v]) => v === 'FAIL').map(([k]) => k);
-const N = coachSteps.length - 1;
-const coachDone = N === 7 && coachSteps.slice(0, N).every(Boolean) && coachSteps[N] === null;
+// 各スナップが «期待どおりの番号» を出しているかまで見る（進みすぎの検出）
+const expect = ['1 / 7', '2 / 7', '3 / 7', '4 / 7', '5 / 7', '6 / 7', '7 / 7'];
+const seen = coachSteps.slice(0, 7).map(s => (s ? s.step : 'なし'));
+const coachDone = coachSteps.length === 8 && coachSteps[7] === null
+  && expect.every((e, i) => seen[i] === e);
 console.log('--- errors ---', errors.length ? errors : 'none');
-console.log('--- coach  ---', coachDone ? `${N}ステップ通過→自動で終了` : coachSteps);
+console.log('--- coach  ---', coachDone ? '7ステップを順に通過→自動で終了' : { expect, seen });
 console.log('--- layout ---', layout);
 console.log('--- kanji  ---', kanji.length ? kanji : 'none (all kana)');
 console.log('--- touch  ---', touch);

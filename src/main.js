@@ -497,6 +497,7 @@ const coach = {
     refreshPalette();
     $('tutorial').classList.add('hidden');
     this.active = true;
+    this.pending = false;
     this.i = -1;
     this.next();
   },
@@ -506,8 +507,13 @@ const coach = {
     if (this.i >= this.steps.length) return this.stop();
     const step = this.steps[this.i];
     const go = () => { $('coach').classList.remove('hidden'); this.show(); };
-    if (step.wait) { $('coach').classList.add('hidden'); this.mark(null); setTimeout(go, step.wait); }
-    else go();
+    if (step.wait) {
+      // 待っている間に先へ進んでいたら、もう出さない
+      const at = this.i;
+      $('coach').classList.add('hidden');
+      this.mark(null);
+      setTimeout(() => { if (this.active && this.i === at) go(); }, step.wait);
+    } else go();
   },
 
   // 光っている «当の要素» にも動きを付ける（枠だけでは気づきにくい）
@@ -546,9 +552,13 @@ const coach = {
   },
 
   notify(ev) {
-    if (!this.active) return;
+    // スライダーの input は動かす間に何十回も飛ぶ。
+    // 予約を1つに絞らないと、その回数だけ先へ進んでしまう。
+    if (!this.active || this.pending) return;
     const step = this.steps[this.i];
-    if (step && step.on === ev) setTimeout(() => this.next(), 260);
+    if (!step || step.on !== ev) return;
+    this.pending = true;
+    setTimeout(() => { this.pending = false; this.next(); }, 260);
   },
 
   stop() {
