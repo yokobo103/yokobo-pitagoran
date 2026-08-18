@@ -115,10 +115,10 @@ Vercel と迷ったが、**手が止まらない方**を採った。
 | 反映 | push → Actions → 約30秒 | push → 約30秒 |
 
 `vite.config.js` の **`base: './'`** が要点。相対パスで吐くので
-Pages のサブパス（`/yokobo-pitagoran/`）でも Vercel のルートでもそのまま動く。
+Pages のサブパス（`/yokobo-pitagora/`）でも Vercel のルートでもそのまま動く。
 どちらに移しても壊れないので、後から乗り換えても構わない。
 
-配信URL: https://yokobo103.github.io/yokobo-pitagoran/
+配信URL: https://yokobo103.github.io/yokobo-pitagora/
 
 ## 7. 指で遊べるようにするために変えた所
 

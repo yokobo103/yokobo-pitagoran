@@ -5,7 +5,7 @@
 
 ## ▶ 遊ぶ
 
-**https://yokobo103.github.io/yokobo-pitagoran/**
+**https://yokobo103.github.io/yokobo-pitagora/**
 
 盤面は縦長（540×810）なので、**スマホは縦持ちのまま**遊べる。
 `main` に push すると GitHub Actions が自動でビルドして Pages に反映する。
