@@ -3,6 +3,7 @@ import { STAGES, WORLD_W, WORLD_H } from './stages.js';
 import { PARTS } from './parts.js';
 import { Game } from './game.js';
 import { render, drawIcon, handlesOf } from './render.js';
+import { sfx, initAudio, setMuted, isMuted, audioState } from './sound.js';
 
 const SAVE_KEY = 'pitagoran.proto.v1';
 const CLEAR_KEY = 'pitagoran.cleared.v1';
@@ -323,6 +324,7 @@ function place(x, y) {
   if (remaining(type) <= 0) state.selectedType = null;
   save();
   refreshPalette();
+  sfx.pop();
   coach.notify('place');
 }
 
@@ -405,7 +407,7 @@ function showOverlay(kind) {
   // ぜんぶ終わったときだけ2人ならぶ
   $('ovChara2').classList.toggle('hidden', !all);
   $('overlay').classList.remove('hidden');
-  if (all) game.celebrate();
+  if (all) { game.celebrate(); sfx.fanfare(true); }
 }
 
 function hideOverlay() {
@@ -751,8 +753,20 @@ window.__pita = {
   },
   draw: (t = 0) => drawFrame(t * 1000),
   records,
+  audioState,
 };
 window.coachStart = () => coach.start();
+
+// ブラウザの自動再生制限があるので、最初の操作で音を起こす
+for (const ev of ['pointerdown', 'keydown']) {
+  window.addEventListener(ev, () => initAudio(), { once: true });
+}
+function refreshMute() {
+  $('btnMute').textContent = isMuted() ? '🔇' : '🔊';
+  $('btnMute').classList.toggle('off', isMuted());
+}
+$('btnMute').onclick = () => { initAudio(); setMuted(!isMuted()); refreshMute(); if (!isMuted()) sfx.pop(); };
+refreshMute();
 
 blockZoomGestures();
 setupZoomEscape();

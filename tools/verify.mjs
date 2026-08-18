@@ -27,7 +27,8 @@ await new Promise(r => server.listen(PORT, r));
 const browser = await puppeteer.launch({
   headless: true,
   timeout: 120000,
-  args: ['--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage'],
+  args: ['--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage',
+         '--autoplay-policy=no-user-gesture-required', '--mute-audio'],
 });
 const page = await browser.newPage();
 await page.setViewport({ width: 375, height: 812, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
@@ -276,6 +277,26 @@ const reward = await page.evaluate(() => {
   return out;
 });
 
+// --- 5. 音（合成なので鳴らせるかだけ見る。音そのものは耳で確かめる） ---
+const audio = await page.evaluate(async () => {
+  const out = {};
+  document.getElementById('btnMute').click();          // 一度オフ
+  out.mutedAfterClick = localStorage.getItem('pitagoran.mute');
+  document.getElementById('btnMute').click();          // オンに戻す
+  out.unmuted = localStorage.getItem('pitagoran.mute');
+  out.icon = document.getElementById('btnMute').textContent;
+
+  // 実際に鳴らす経路を通す（例外が出ないこと・AudioContextが起きること）
+  window.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+  __pita.back(); __pita.load(0); __pita.clear();
+  [['rail', 200, 250, 0.25], ['rail', 300, 570, 0.35]].forEach(p => __pita.put(...p));
+  __pita.play();
+  for (let i = 0; i < 900 && !__pita.game.result; i++) __pita.game.update(16.6667);
+  out.result = __pita.game.result;
+  out.ctxState = __pita.audioState();
+  return out;
+});
+
 if (process.argv.includes('--shot')) {
   await mkdir('screenshots', { recursive: true });
   await page.evaluate(() => { __pita.back(); __pita.load(0); __pita.clear(); });
@@ -349,6 +370,7 @@ console.log('--- layout ---', layout);
 console.log('--- kanji  ---', kanji.length ? kanji : 'none (all kana)');
 console.log('--- images ---', images);
 console.log('--- touch  ---', touch);
+console.log('--- audio  ---', audio);
 console.log('--- reward ---', reward);
 console.log('--- stages ---', failed.length ? `FAILED: ${failed.join(', ')}` : `all ${Object.keys(stages).length} clear`);
 const badImg = Object.values(images).filter(v => v !== 'ok' && !v.startsWith('ok'));

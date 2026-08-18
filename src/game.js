@@ -2,6 +2,7 @@
 import Matter from 'matter-js';
 import { PARTS, buildPart } from './parts.js';
 import { WORLD_W, WORLD_H } from './stages.js';
+import { sfx } from './sound.js';
 
 const { Engine, Composite, Bodies, Body, Events, Vector } = Matter;
 
@@ -123,13 +124,17 @@ export class Game {
       const contacts = pair.contacts || pair.activeContacts || [];
       const c = contacts[0] && (contacts[0].vertex || contacts[0]);
       if (speed > 5.5 && c) this.spark(c.x, c.y, Math.min(1, speed / 16));
+      if (this.running && speed > 2.2) {
+        const kind = (bodyA.label === 'domino' || bodyB.label === 'domino') ? 'domino' : 'hard';
+        sfx.hit(speed, kind);
+      }
     }
   }
 
   checkGoal(sensor, other) {
     if (sensor !== this.goalSensor) return false;
     if (!other.label.startsWith('ball')) return false;
-    if (this.running && !this.result) { this.result = 'clear'; this.celebrate(); }
+    if (this.running && !this.result) { this.result = 'clear'; this.celebrate(); sfx.fanfare(); }
     return true;
   }
 
@@ -145,6 +150,7 @@ export class Game {
     const along = other.velocity.x * t.x + other.velocity.y * t.y;
     Body.setVelocity(other, { x: n.x * p + t.x * along * 0.6, y: n.y * p + t.y * along * 0.6 });
     this.spark(other.position.x, other.position.y, 1);
+    sfx.boing(1);
     return true;
   }
 
@@ -173,6 +179,7 @@ export class Game {
     if (sp > MAX) { vx = vx / sp * MAX; vy = vy / sp * MAX; }
     Body.setVelocity(other, { x: vx, y: vy });
     this.spark(other.position.x, other.position.y, 0.8);
+    sfx.boing(0.7 + Math.min(1, Math.hypot(vx, vy) / 20));
     return true;
   }
 
@@ -188,6 +195,7 @@ export class Game {
       this.spark(door.position.x, door.position.y, 1);
     }
     this.spark(sensor.position.x, sensor.position.y, 1);
+    sfx.click();
     return true;
   }
 
@@ -203,6 +211,7 @@ export class Game {
         this.spark(w.ax, w.ay, 1);
         Body.setPosition(b, { x: w.bx, y: w.by });
         this.spark(w.bx, w.by, 1);
+        sfx.warp();
       }
     }
   }
@@ -323,12 +332,12 @@ export class Game {
       if (b.isStatic || b.isSensor) continue;
       fastest = Math.max(fastest, b.speed);
       if (b.position.y > WORLD_H + 250 || b.position.y < -420 || b.position.x < -220 || b.position.x > WORLD_W + 220) {
-        if (b === this.ball) { this.result = 'fail'; return; }
+        if (b === this.ball) { this.result = 'fail'; sfx.fail(); return; }
         Body.setPosition(b, { x: -600, y: -600 });
         Body.setVelocity(b, { x: 0, y: 0 });
       }
     }
     this.idle = fastest < 0.42 ? this.idle + dt : 0;
-    if (this.idle > 3600 || this.elapsed > 45000) this.result = 'fail';
+    if (this.idle > 3600 || this.elapsed > 45000) { this.result = 'fail'; sfx.fail(); }
   }
 }
