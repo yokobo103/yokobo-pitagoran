@@ -5,6 +5,7 @@ import { Game } from './game.js';
 import { render, drawIcon, handlesOf } from './render.js';
 
 const SAVE_KEY = 'pitagoran.proto.v1';
+const CLEAR_KEY = 'pitagoran.cleared.v1';
 const $ = (id) => document.getElementById(id);
 
 // キャラ画像はビルド時に base が付くので、HTMLに書いた src から借りる
@@ -50,6 +51,28 @@ function undo() {
 
 // ---------- 保存 ----------
 const saved = JSON.parse(localStorage.getItem(SAVE_KEY) || '{}');
+
+// --- クリア記録。«やった分が残る» ことが達成感の土台 ---
+const records = JSON.parse(localStorage.getItem(CLEAR_KEY) || '{}');  // { stageId: さいこうタイム(秒) }
+const PLAYABLE = STAGES.filter(s => s.id !== 'sandbox');
+const clearedCount = () => PLAYABLE.filter(s => records[s.id] != null).length;
+
+function refreshProgress() {
+  $('progress').textContent = `⭐ ${clearedCount()} / ${PLAYABLE.length}`;
+}
+
+// クリアを記録し、«はじめて» と «しんきろく» を返す
+function recordClear(seconds) {
+  const id = stage().id;
+  if (id === 'sandbox') return { first: false, best: false };
+  const prev = records[id];
+  const first = prev == null;
+  const best = first || seconds < prev;
+  if (best) { records[id] = seconds; localStorage.setItem(CLEAR_KEY, JSON.stringify(records)); }
+  refreshProgress();
+  buildTabs();
+  return { first, best, prev };
+}
 function save() {
   saved[stage().id] = state.placed.map(({ type, x, y, angle }) => ({ type, x, y, angle }));
   localStorage.setItem(SAVE_KEY, JSON.stringify(saved));
@@ -155,8 +178,9 @@ function buildTabs() {
   nav.innerHTML = '';
   STAGES.forEach((s, i) => {
     const b = document.createElement('button');
-    b.textContent = s.name;
-    if (i === state.stageIndex) b.className = 'on';
+    b.textContent = records[s.id] != null ? `⭐ ${s.name}` : s.name;
+    if (records[s.id] != null) b.classList.add('done');
+    if (i === state.stageIndex) b.classList.add('on');
     b.onclick = () => loadStage(i);
     nav.appendChild(b);
   });
@@ -351,16 +375,37 @@ function back() {
 function showOverlay(kind) {
   state.overlayShown = true;
   const cleared = kind === 'clear';
-  $('ovTitle').textContent = cleared ? 'クリア！' : 'とどかなかった…';
+  const secs = +(game.elapsed / 1000).toFixed(1);
+  const rec = cleared ? recordClear(secs) : { first: false, best: false };
+  const all = cleared && clearedCount() === PLAYABLE.length;
+
+  $('ovTitle').textContent = !cleared ? 'とどかなかった…'
+    : all ? 'ぜんぶ クリア！'
+      : rec.first ? 'はじめて クリア！' : 'クリア！';
   $('ovTitle').style.color = cleared ? 'var(--accent)' : '#ff8f8f';
-  $('ovText').textContent = cleared
-    ? `${(game.elapsed / 1000).toFixed(1)}びょうで カゴに はいったよ`
-    : 'パーツを うごかして もういちど';
+
+  $('ovBadge').classList.toggle('hidden', !(cleared && rec.best && !rec.first));
+  $('ovBadge').textContent = 'しんきろく！';
+
+  $('ovText').textContent = !cleared ? 'パーツを うごかして もういちど'
+    : all ? `${PLAYABLE.length}こ ぜんぶ できたね！`
+      : rec.first ? `${secs}びょうで カゴに はいったよ`
+        : `${secs}びょう　さいこう ${records[stage().id]}びょう`;
+
+  // 集めた星をその場で見せる
+  const stars = cleared && stage().id !== 'sandbox'
+    ? `⭐ ${clearedCount()} / ${PLAYABLE.length}` : '';
+  $('ovStars').textContent = stars;
+  $('ovStars').classList.toggle('hidden', !stars);
+
   $('ovNext').style.display = cleared && state.stageIndex < STAGES.length - 1 ? '' : 'none';
   $('ovAgain').textContent = cleared ? 'もういちど' : 'なおす';
   // ニャビットの表情で結果を伝える（文字より速い）
   $('ovChara').src = cleared ? CHARA_HAPPY : CHARA_OOPS;
+  // ぜんぶ終わったときだけ2人ならぶ
+  $('ovChara2').classList.toggle('hidden', !all);
   $('overlay').classList.remove('hidden');
+  if (all) game.celebrate();
 }
 
 function hideOverlay() {
@@ -705,12 +750,14 @@ window.__pita = {
     return { result: game.result, t: +(game.elapsed / 1000).toFixed(2), ball: game.ball && { x: Math.round(game.ball.position.x), y: Math.round(game.ball.position.y) } };
   },
   draw: (t = 0) => drawFrame(t * 1000),
+  records,
 };
 window.coachStart = () => coach.start();
 
 blockZoomGestures();
 setupZoomEscape();
 setupCanvas();
+refreshProgress();
 loadStage(0);
 requestAnimationFrame(loop);
 

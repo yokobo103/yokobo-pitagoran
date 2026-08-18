@@ -17,6 +17,7 @@
     <h1>ピタゴラン</h1>
     <button id="btnHelp" class="btn help" title="あそびかた">？</button>
     <button id="btnClear" class="btn help danger" title="ぜんぶ けす">🗑</button>
+    <span id="progress" class="progress" title="クリアした かず">⭐ 0 / 20</span>
     <nav id="stageTabs" class="tabs"></nav>
   </header>
 
@@ -26,9 +27,14 @@
         <canvas id="cv"></canvas>
         <div id="overlay" class="overlay hidden">
           <div class="card">
-            <img id="ovChara" class="ovchara" src="/chara-nyabbit.webp" width="362" height="400" alt="" />
+            <div class="ovcharas">
+              <img id="ovChara2" class="ovchara hidden" src="/chara-yokobo.webp" width="267" height="400" alt="" />
+              <img id="ovChara" class="ovchara" src="/chara-nyabbit.webp" width="362" height="400" alt="" />
+            </div>
             <p id="ovTitle" class="ovTitle">クリア！</p>
+            <p id="ovBadge" class="ovbadge hidden">しんきろく！</p>
             <p id="ovText" class="ovText"></p>
+            <p id="ovStars" class="ovstars"></p>
             <div class="ovBtns">
               <button id="ovAgain" class="btn">もういちど</button>
               <button id="ovNext" class="btn primary">つぎへ</button>

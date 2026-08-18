@@ -235,6 +235,47 @@ const stages = await page.evaluate(() => {
   return out;
 });
 
+// --- 4. 達成感まわり（記録・星・紙ふぶき） ---
+// 前のテストの記録を引きずらないよう、消してから読み直す
+await page.evaluate(() => localStorage.removeItem('pitagoran.cleared.v1'));
+await page.reload({ waitUntil: 'networkidle0' });
+await page.evaluate(() => { document.getElementById('coachSkip').click(); });
+
+const reward = await page.evaluate(() => {
+  const out = {};
+  const SOL = [['rail', 200, 250, 0.25], ['rail', 300, 570, 0.35]];
+  const play = () => {
+    __pita.back(); __pita.load(0); __pita.clear();
+    SOL.forEach(p => __pita.put(...p));
+    __pita.play();
+    for (let i = 0; i < 900 && !__pita.game.result; i++) __pita.game.update(16.6667);
+    __pita.step(1);   // オーバーレイを出す
+  };
+  const read = () => ({
+    title: document.getElementById('ovTitle').textContent,
+    badge: document.getElementById('ovBadge').classList.contains('hidden') ? 'なし' : document.getElementById('ovBadge').textContent,
+    stars: document.getElementById('ovStars').textContent,
+    progress: document.getElementById('progress').textContent,
+  });
+
+  out.before = document.getElementById('progress').textContent;
+  play();
+  out.firstClear = read();
+  out.tabHasStar = document.querySelectorAll('#stageTabs button')[0].textContent.startsWith('⭐');
+  out.confetti = __pita.game.confetti.length > 0;
+
+  play();                                   // 同タイム → 記録更新なし
+  out.sameTime = read();
+
+  // わざと遅い記録を入れてから走る → «しんきろく» が出るはず
+  const rec = JSON.parse(localStorage.getItem('pitagoran.cleared.v1'));
+  rec.st1 = 99; localStorage.setItem('pitagoran.cleared.v1', JSON.stringify(rec));
+  Object.assign(__pita.records, rec);
+  play();
+  out.newRecord = read();
+  return out;
+});
+
 if (process.argv.includes('--shot')) {
   await mkdir('screenshots', { recursive: true });
   await page.evaluate(() => { __pita.back(); __pita.load(0); __pita.clear(); });
@@ -308,6 +349,7 @@ console.log('--- layout ---', layout);
 console.log('--- kanji  ---', kanji.length ? kanji : 'none (all kana)');
 console.log('--- images ---', images);
 console.log('--- touch  ---', touch);
+console.log('--- reward ---', reward);
 console.log('--- stages ---', failed.length ? `FAILED: ${failed.join(', ')}` : `all ${Object.keys(stages).length} clear`);
 const badImg = Object.values(images).filter(v => v !== 'ok' && !v.startsWith('ok'));
 process.exit(errors.length || failed.length || kanji.length || !coachDone || badImg.length ? 1 : 0);

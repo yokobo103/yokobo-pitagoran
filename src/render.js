@@ -242,6 +242,19 @@ function drawHandles(ctx, p) {
   ctx.restore();
 }
 
+function drawConfetti(ctx, bits) {
+  if (!bits || !bits.length) return;
+  for (const p of bits) {
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, p.life * 2.2);
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.a);
+    ctx.fillStyle = p.c;
+    ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+    ctx.restore();
+  }
+}
+
 export function render(ctx, view) {
   const { game, stage, placed, ghost, selectedUid, running, t, showHandles } = view;
   ctx.clearRect(0, 0, WORLD_W, WORLD_H);
@@ -267,6 +280,7 @@ export function render(ctx, view) {
       ctx.fillRect(p.x - 2, p.y - 2, 4, 4);
     }
     ctx.globalAlpha = 1;
+    drawConfetti(ctx, game.confetti);
   } else {
     // スタート位置の目印
     ctx.save();

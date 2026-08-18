@@ -134,7 +134,29 @@ canvas#cv {
   from { transform: scale(.55) translateY(14px); opacity: 0; }
   to   { transform: scale(1) translateY(0); opacity: 1; }
 }
+.ovcharas { display: flex; justify-content: center; align-items: flex-end; gap: 10px; }
+.ovchara.hidden { display: none; }
 .ovTitle { font-size: 26px; margin: 0 0 6px; color: var(--accent); }
+.ovbadge {
+  display: inline-block; margin: 0 0 8px; padding: 3px 12px; border-radius: 999px;
+  background: var(--accent2); color: #06202b; font-size: 12px; font-weight: 700;
+  animation: ovpop .45s cubic-bezier(.2, 1.6, .4, 1) both .15s;
+}
+.ovbadge.hidden { display: none; }
+.ovstars {
+  margin: 10px 0 0; font-size: 13px; font-weight: 700; color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.ovstars.hidden { display: none; }
+
+/* クリアした数。ここが増えるのを見せたい */
+.progress {
+  flex: 0 0 auto; font-size: 12px; font-weight: 700; color: var(--accent);
+  background: rgba(255, 209, 102, .12); border: 1px solid rgba(255, 209, 102, .35);
+  border-radius: 999px; padding: 4px 10px; font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.tabs button.done { border-color: rgba(255, 209, 102, .55); color: var(--ink); }
 .ovText { font-size: 13px; color: var(--dim); margin: 0 0 16px; }
 .ovBtns { display: flex; gap: 10px; justify-content: center; }
 

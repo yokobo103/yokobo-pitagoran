@@ -34,6 +34,7 @@ export class Game {
     this.doorBodies = new Map();
     this.pressed = new Set();
     this.sparks = [];
+    this.confetti = [];
     this.elapsed = 0;
     this.idle = 0;
     this.result = null;
@@ -128,7 +129,7 @@ export class Game {
   checkGoal(sensor, other) {
     if (sensor !== this.goalSensor) return false;
     if (!other.label.startsWith('ball')) return false;
-    if (this.running && !this.result) this.result = 'clear';
+    if (this.running && !this.result) { this.result = 'clear'; this.celebrate(); }
     return true;
   }
 
@@ -267,6 +268,25 @@ export class Game {
     }
   }
 
+  // クリアの瞬間の紙ふぶき。«やった» が一目で分かる合図
+  celebrate() {
+    const cols = ['#ffd166', '#7ee0ff', '#ff8fb0', '#9be08f', '#c4aaff', '#ffffff'];
+    for (let i = 0; i < 110; i++) {
+      this.confetti.push({
+        x: WORLD_W / 2 + (Math.random() - 0.5) * 300,
+        y: WORLD_H * 0.42 + (Math.random() - 0.5) * 140,
+        vx: (Math.random() - 0.5) * 8,
+        vy: -4 - Math.random() * 9,
+        w: 4 + Math.random() * 6,
+        h: 6 + Math.random() * 8,
+        a: Math.random() * 6,
+        va: (Math.random() - 0.5) * 0.5,
+        c: cols[(Math.random() * cols.length) | 0],
+        life: 1,
+      });
+    }
+  }
+
   spark(x, y, s) {
     for (let i = 0; i < 3 + s * 4; i++) {
       this.sparks.push({
@@ -281,6 +301,10 @@ export class Game {
   update(dt) {
     for (const p of this.sparks) { p.x += p.vx; p.y += p.vy; p.vy += 0.25; p.life -= 0.045; }
     this.sparks = this.sparks.filter(p => p.life > 0);
+    for (const p of this.confetti) {
+      p.x += p.vx; p.y += p.vy; p.vy += 0.22; p.vx *= 0.995; p.a += p.va; p.life -= 0.006;
+    }
+    this.confetti = this.confetti.filter(p => p.life > 0 && p.y < WORLD_H + 60);
     if (!this.running || this.result) return;
 
     this.elapsed += dt;
