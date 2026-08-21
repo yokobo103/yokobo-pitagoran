@@ -7,8 +7,15 @@
 from PIL import Image
 import os
 
-SRC = r'C:\Users\Yokob\playground\20260702_CM動画作成パイプライン\assets\characters'
-OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'public')
+HERE = os.path.dirname(os.path.abspath(__file__))
+REPO = os.path.dirname(HERE)
+# 素材はこのリポジトリの外（同じ作業場に並ぶCM動画作成パイプライン）にある。
+# 場所が違うときは環境変数 CHARA_SRC で渡す。
+SRC = os.environ.get(
+    'CHARA_SRC',
+    os.path.join(os.path.dirname(REPO), '20260702_CM動画作成パイプライン', 'assets', 'characters'),
+)
+OUT = os.path.join(REPO, 'public')
 
 # (フォルダ, 表情, 出力名, 高さ)
 JOBS = [
